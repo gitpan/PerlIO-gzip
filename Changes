@@ -55,3 +55,8 @@ Revision history for Perl extension Layer::Gzip.
       Commented the tests that will fail due to this bug.
       Attempted to detect the "OS" type at compile time to set the default
       OS for the gzip header.
+
+0.10  Sun Aug 26 13:05:25 BST 2001
+      By 5.7.2 it seems that the pushed argument is passed in as &sv_undef
+      rather than NULL. I wasn't testing SvOK() and was getting use of
+      uninitialized value errors.

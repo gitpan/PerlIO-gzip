@@ -671,7 +671,7 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, SV *arg)
   STRLEN len;
   const char *argstr;
 
-  if (arg)
+  if (arg && SvOK(arg))
     argstr = SvPV(arg, len);
   else {
     argstr = NULL;
