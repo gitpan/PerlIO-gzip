@@ -19,9 +19,12 @@ chdir 't' if -d 't';
 
 # Test numbers in file names reflect the original numbering in test.pl
 
-# There are TODO tests - currently the perl core can't unread onto :unix and
-# then push another layer atop it, without losing the unread data. This shafts
-# gzip() when the gzip file has embedded filenames or comments.
+# There were TODO tests but they've been hacked around.
+# Currently the perl core can't unread onto :unix (and other non-fast buffered
+# layers), then push another layer atop it, without losing the unread data.
+# This shafts gzip() when the gzip file has embedded filenames or comments
+# so it hacks round it by pushing the buffering layer just before the unread.
+# Grrr.
 
 my $perlgz = "perl.gz";
 my $done_perlgz;
@@ -64,14 +67,14 @@ foreach my $buffering ('', ':unix', ':stdio', ':perlio') {
     ok (open (FOO, "<$buffering:gzip", "ok17.gz"),
         "open ok17.gz with <$buffering:gzip");
   TODO: {
-      local $TODO = $unread_bug if $buffering eq ':unix';
-      local $TODO = $unread_stdio_bug if $buffering eq $stdio;
+      # local $TODO = $unread_bug if $buffering eq ':unix';
+      # local $TODO = $unread_stdio_bug if $buffering eq $stdio;
       is (<FOO>, "ok 17\n");
     }
     ok (eof (FOO), 'should be end of file');
   TODO: {
-      local $TODO = $unread_bug if $buffering eq ':unix';
-      local $TODO = $unread_stdio_bug if $buffering eq $stdio;
+      # local $TODO = $unread_bug if $buffering eq ':unix';
+      # local $TODO = $unread_stdio_bug if $buffering eq $stdio;
       ok (close (FOO), "close it"); # As TODO as the read
     }
     ok (open (FOO, "<$buffering:gzip(none)", "ok19"),
@@ -92,16 +95,16 @@ foreach my $buffering ('', ':unix', ':stdio', ':perlio') {
     ok (open (FOO, "<$buffering:gzip($args)", $file),
         "open $file with <$buffering:gzip($args)");
   TODO: {
-      local $TODO = $unread_bug if $buffering eq ':unix' and $file eq 'ok19';
-      local $TODO = $unread_stdio_bug
-	if $buffering eq $stdio and $file eq 'ok19';
+      # local $TODO = $unread_bug if $buffering eq ':unix' and $file eq 'ok19';
+      # local $TODO = $unread_stdio_bug
+	# if $buffering eq $stdio and $file eq 'ok19';
       is (<FOO>, $contents);
     }
     ok (eof (FOO), 'should be end of file');
   TODO: {
-      local $TODO = $unread_bug if $buffering eq ':unix' and $file eq 'ok19';
-      local $TODO = $unread_stdio_bug
-	if $buffering eq $stdio and $file eq 'ok19';
+      # local $TODO = $unread_bug if $buffering eq ':unix' and $file eq 'ok19';
+      # local $TODO = $unread_stdio_bug
+	# if $buffering eq $stdio and $file eq 'ok19';
       ok (close (FOO), "close it"); # As TODO as the read
     }
   }
@@ -130,12 +133,12 @@ foreach my $buffering ('', ':unix', ':stdio', ':perlio') {
     skip "$command failed", 3 if $done_perlgz;
     ok ((open GZ, "<$buffering:gzip", "perl.gz"), "open perl.gz");
   TODO: {
-      local $TODO = $unread_bug if $buffering eq ':unix';
+      # local $TODO = $unread_bug if $buffering eq ':unix';
       ok (compare ($^X, \*GZ) == 0, "compare with original $^X");
     }
-    ok (eof (FOO), 'should be end of file');
+    ok (eof (GZ), 'should be end of file');
   TODO: {
-      local $TODO = $unread_bug if $buffering eq ':unix';
+      # local $TODO = $unread_bug if $buffering eq ':unix';
       ok ((close GZ), "close perl.gz");
     }
   }
@@ -167,10 +170,10 @@ foreach my $buffering ('', ':unix', ':stdio', ':perlio') {
         "open $file with <$buffering:gzip$layer");
   TODO: {
       # ok54.gz.len has an embedded filename.
-      local $TODO = $unread_bug
-        if $buffering eq ':unix' and $file eq 'ok54.gz.len';
-      local $TODO = $unread_stdio_bug
-	if $buffering eq $stdio and $file eq 'ok54.gz.len';
+      # local $TODO = $unread_bug
+        # if $buffering eq ':unix' and $file eq 'ok54.gz.len';
+      # local $TODO = $unread_stdio_bug
+	# if $buffering eq $stdio and $file eq 'ok54.gz.len';
       is (<FOO>, $contents);
     }
     ok (eof (FOO), "should be end of file");

@@ -98,3 +98,16 @@ Revision history for Perl extension Layer::Gzip.
       possibilities.
       
       Actually unlink the test perl.gz file.
+
+0.17  Wed Jun 30 18:29:30 BST 2004
+      Track down the cause of the problem reported by some Linux users. It's
+      another manifestation of the core perlio bug, whereby perlio loses data
+      if you push another layer onto a file handle with unread data. In this
+      case the layer push is happening on some Linux systems because the stdio
+      layer isn't supporting Perl's fast buffer snooping, presuambly because
+      glibc has decided to use mmap() for the file. Work around is for
+      PerlIO::gzip to push its buffering layer before it calls unread, which
+      is a somewhat messy hack, but works.
+      This means that all the TODO tests can be taken out, as they now pass.
+
+      Fix small typo in read.t

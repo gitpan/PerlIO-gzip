@@ -282,26 +282,23 @@ check_gzip_header (PerlIO *f) {
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip check_gzip_header read=%08"UVxf"\n", (UV)avail);
 #endif
-    if (avail < 0)
+    SvCUR_set(temp, avail);
+
+    if (avail < 0) {
       code = LAYERGZIP_GZIPHEADER_ERROR;
-    else if (avail < 2 )
+      goto bad;
+    } else if (avail < 2 ) {
       code = LAYERGZIP_GZIPHEADER_BADMAGIC;
-    else if (avail < GZIP_HEADERSIZE) {
+      goto bad;
+    } else if (avail < GZIP_HEADERSIZE) {
       /* Too short, but if magic number isn't there, it's not a gzip file  */
       if (header[0] == 0x1f && header[1] == 0x8b) {
 	/* It's trying to be a gzip file.  */
 	code = LAYERGZIP_GZIPHEADER_ERROR;
       } else
 	code = LAYERGZIP_GZIPHEADER_BADMAGIC;
+      goto bad;
     }
-
-    if (code != LAYERGZIP_GZIPHEADER_GOOD) {
-      if (avail > 0)
-	PerlIO_unread (below, header, avail);
-      SvREFCNT_dec(temp);
-      return code;
-    }
-    SvCUR_set(temp, avail);
   }
 
 #if DEBUG_LAYERGZIP
@@ -409,6 +406,21 @@ check_gzip_header (PerlIO *f) {
 		   "avail=%08"UVxf"\n", header, (UV)avail);
 #endif
       if (avail) {
+	if (!(PerlIOBase(below)->flags & PERLIO_F_FASTGETS)) {
+#if DEBUG_LAYERGZIP
+	  PerlIO_debug("check_gzip_header HACK around core PerlIO bug\n");
+#endif
+	  if (!PerlIO_push(aTHX_ below,&PerlIO_perlio,"r",&PL_sv_undef)) {
+#if DEBUG_LAYERGZIP
+	    PerlIO_debug("check_gzip_header failed to push new layer\n");
+#endif
+	    code = LAYERGZIP_GZIPHEADER_ERROR;
+	    goto bad;
+	  }
+	  PerlIOSelf(f,PerlIOGzip)->flags |= LAYERGZIP_FLAG_OURBUFFERBELOW;
+	  below = PerlIONext(f);
+	}
+
 	unread = PerlIO_unread (below, header, avail);
 	if (unread != avail) {
 #if DEBUG_LAYERGZIP
@@ -429,13 +441,32 @@ check_gzip_header (PerlIO *f) {
     if (temp) {
       STRLEN len;
       STDCHAR *ptr = SvPV(temp, len);
+      PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
+
 #if DEBUG_LAYERGZIP
       PerlIO_debug("PerlIOGzip check_gzip_header failed. unreading ptr=%p len=%08"UVxf"\n", ptr, (UV)len);
 #endif
+
+      if (((g->flags & LAYERGZIP_FLAG_READMODEMASK)
+	   == LAYERGZIP_FLAG_MAYBEGZIPHEADER)
+	  && !(PerlIOBase(below)->flags & PERLIO_F_FASTGETS)) {
+#if DEBUG_LAYERGZIP
+	PerlIO_debug("check_gzip_header HACK around core PerlIO bug\n");
+#endif
+	if (PerlIO_push(aTHX_ below,&PerlIO_perlio,"r",&PL_sv_undef)) {
+	  g->flags |= LAYERGZIP_FLAG_OURBUFFERBELOW;
+	  below = PerlIONext(f);
+	} else {
+#if DEBUG_LAYERGZIP
+	  PerlIO_debug("check_gzip_header failed to push new layer\n");
+#endif
+	}
+      }
       PerlIO_unread (below, ptr, len);
       SvREFCNT_dec(temp);
     }
-    PerlIOBase(f)->flags |= PERLIO_F_ERROR;
+    if (code != LAYERGZIP_GZIPHEADER_BADMAGIC)
+      PerlIOBase(f)->flags |= PERLIO_F_ERROR;
   }
   return code;
 }
