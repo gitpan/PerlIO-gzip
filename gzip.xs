@@ -1200,21 +1200,20 @@ PerlIOGzip_flush(PerlIO *f) {
 }
 
 
-/* Hmm. These need to be public  */
-#if 0
-static SSize_t
-PerlIO_write_fail(PerlIO *f, const void *vbuf, Size_t count)
-{
-  return -1;
-}
-#endif
+/* Hmm. These need to be public?  */
 
 static IV
-PerlIO_seek_fail(PerlIO *f, Off_t offset, int whence)
+PerlIOGzip_seek_fail(PerlIO *f, Off_t offset, int whence)
 {
   return -1;
 }
 
+PerlIO *
+PerlIOGzip_dup(pTHX_ PerlIO *f, PerlIO *o, CLONE_PARAMS *param)
+{
+  croak ("PerlIO::gzip can't yet clone active layers");
+  return NULL;
+}
 
 PerlIO_funcs PerlIO_gzip = {
   "gzip",
@@ -1225,10 +1224,11 @@ PerlIO_funcs PerlIO_gzip = {
   PerlIOBuf_open,
   PerlIOGzip_getarg,
   PerlIOBase_fileno,
+  PerlIOGzip_dup,
   PerlIOBuf_read,
   PerlIOBuf_unread, /* I am not convinced that this is going to work */
   PerlIOBuf_write,
-  PerlIO_seek_fail,	/* PerlIOBuf_seek, */
+  PerlIOGzip_seek_fail,	/* PerlIOBuf_seek, */
   PerlIOBuf_tell,
   PerlIOGzip_close,
   PerlIOGzip_flush,	/* PerlIOBuf_flush, Hmm. open() expects to flush :-( */

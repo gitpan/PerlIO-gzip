@@ -1,20 +1,21 @@
-PerlIO::gzip version 0.09
+PerlIO::gzip version 0.11
 =========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
 Alpha at the moment, does now (well, since 0.06, oops) gzip and gunzip.
 **DON'T** trust it with your data.
 
-YOU NEED PERL later than 5.7.1
+YOU NEED PERL later than 5.7.2
                               yes. this only works on UNSTABLE DEVELOPMENT PERL
 
 Warning >>>Moving Goalposts
 
 Nick I-S has changed the API for perlio. patchelevel 9333 worked for 0.01-0.08
-This version needs 5.7.1, but vanilla 5.7.1 has bugs in open() that mean that
-a layer failing to push currently doesn't cause the entire open to fail (as
-it should). Currently tests 13, 93, 97 and 98 fail because of this.
-The API may change again.
+This version needs 5.7.2 (tested with patchlevel 12700), but vanilla 5.7.2 has
+bugs in open() that mean that a layer failing to push currently doesn't cause
+the entire open to fail (as it should). Currently tests 13, 93, 97 and 98 fail
+because of this. The API may change again (again; the only difference between
+0.11 and 0.10 is due to another PerlIO API change)
 
 INSTALLATION
 
@@ -35,7 +36,7 @@ This module requires perl 5.7.1 or later compiler with PerlIO.
 
 BUGS
 
-Threads - I doubt this module is threadsafe.
+Threads - Currenly this module isn't threadsafe as it can't clone an open layer.
 flush() doesn't really flush, just empty the buffer
 
 TODO
@@ -66,4 +67,3 @@ Public License or the Artistic License, as specified in perl's README
 file.
 
 Copyright © 2001 Nicholas Clark
-
