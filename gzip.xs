@@ -1,7 +1,7 @@
 /* -*- c -*- */
 /*    gzip.xs
  *
- *    Copyright (C) 2001, Nicholas Clark
+ *    Copyright (C) 2001, 2002, Nicholas Clark
  *
  *    You may distribute this work under the terms of either the GNU General
  *    Public License or the Artistic License, as specified in perl's README
@@ -703,7 +703,7 @@ PerlIOGzip_pushed(pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
     const char *end = argstr + len;
     while (1) {
       int arg_bad = 0;
-      const char *comma = memchr (argstr, ',', len);
+      const char *comma = memchr (argstr, ',', end - argstr);
       STRLEN this_len = comma ? (comma - argstr) : (end - argstr);
 
 #if DEBUG_LAYERGZIP

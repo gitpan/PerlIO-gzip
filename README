@@ -1,8 +1,7 @@
-PerlIO::gzip version 0.13
+PerlIO::gzip version 0.14
 =========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
-Alpha at the moment, does now (well, since 0.06, oops) gzip and gunzip.
 **DON'T** trust it with your data.
 
 YOU NEED PERL 5.8.0 or later.
@@ -14,7 +13,7 @@ To install this module type the following:
    perl Makefile.PL
    make
    make test
-   echo I know that this is alpha quality and I am using it at my own risk
+   echo I know that I am using this at my own risk
    make install
 
 That echo statement is particularly important.
