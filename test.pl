@@ -7,7 +7,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test;
-BEGIN { plan tests => 50 };
+BEGIN { plan tests => 62 };
 use File::Compare; # This is standard in all distributions that have layers.
 use PerlIO::gzip;
 ok(1); # If we made it this far, we're ok.
@@ -298,22 +298,84 @@ if (close FOO) {
   print "not ok 47\n";
 }
 
+# Verify that short files get an error on close
+if (open FOO, "<:gzip", "ok49.gz.short") {
+  print "ok 48\n";
+} else {
+  print "not ok 48\n";
+}
+while (<FOO>) {
+  print;
+}
+if (eof FOO) {
+  print "ok 50\n";
+} else {
+  print "not ok 50\n";
+}
+# this should error
+if (close FOO) {
+  print "not ok 51\n";
+} else {
+  print "ok 51\n";
+}
 
+# Verify that files with erroroneous lengths get an error on close
+if (open FOO, "<:gzip", "ok53.gz.len") {
+  print "ok 52\n";
+} else {
+  print "not ok 52\n";
+}
+while (<FOO>) {
+  print;
+}
+if (eof FOO) {
+  print "ok 54\n";
+} else {
+  print "not ok 54\n";
+}
+# this should error
+if (close FOO) {
+  print "not ok 55\n";
+} else {
+  print "ok 55\n";
+}
+
+# Verify that files with erroroneous crc get an error on close
+if (open FOO, "<:gzip", "ok57.gz.crc") {
+  print "ok 56\n";
+} else {
+  print "not ok 56\n";
+}
+while (<FOO>) {
+  print;
+}
+if (eof FOO) {
+  print "ok 58\n";
+} else {
+  print "not ok 58\n";
+}
+# this should error
+if (close FOO) {
+  print "not ok 59\n";
+} else {
+  print "ok 59\n";
+}
+  
 # Writes don't work (yet)
 if (open FOO, ">:gzip", "empty") {
-  print "not ok 48\n";
+  print "not ok 69\n";
 } else {
-  print "ok 48\n";
+  print "ok 60\n";
 }
 if (open FOO, ">>:gzip", "empty") {
-  print "not ok 49\n";
+  print "not ok 61\n";
 } else {
-  print "ok 49\n";
+  print "ok 61\n";
 }
 if (open FOO, "+<:gzip", "empty") {
-  print "not ok 50\n";
+  print "not ok 62\n";
 } else {
-  print "ok 50\n";
+  print "ok 62\n";
 }
 while (-f "empty") {
   # VMS is going to have several of these, isn't it?

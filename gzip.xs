@@ -52,6 +52,7 @@
 #define LAYERGZIP_FLAG_LAZY		0x04 /* defer header check */
 #define LAYERGZIP_FLAG_OURBUFFERBELOW	0x08 /* We own the buffer below us */
 #define LAYERGZIP_FLAG_DEFL_INIT_DONE	0x10 /* We own the buffer below us */
+#define LAYERGZIP_FLAG_DO_CRC_AT_END	0x20 /* Check CRC at Z_STREAM_END */
 
 #define LAYERGZIP_GZIPHEADER_GOOD	0
 #define LAYERGZIP_GZIPHEADER_ERROR	1
@@ -67,6 +68,7 @@ typedef struct {
   z_stream	zs;		/* zlib's struct.  */
   int		status;		/* state of the inflater */
   int		flags;		/* bitmap */
+  unsigned long	crc;		/* ongoing CRC of data */
 } PerlIOGzip;
 
 /* Logic of the header passer:
@@ -421,6 +423,7 @@ check_gzip_header_and_init (PerlIO *f) {
 #endif
 
   if ((g->flags & LAYERGZIP_FLAG_READMODEMASK) != LAYERGZIP_FLAG_NOGZIPHEADER) {
+    g->flags |= LAYERGZIP_FLAG_DO_CRC_AT_END;
     code = check_gzip_header (f);
     if (code != LAYERGZIP_GZIPHEADER_GOOD) {
 #if DEBUG_LAYERGZIP
@@ -431,7 +434,9 @@ check_gzip_header_and_init (PerlIO *f) {
       else {
 	int mode = g->flags & LAYERGZIP_FLAG_READMODEMASK;
 	if (mode == LAYERGZIP_FLAG_MAYBEGZIPHEADER) {
-	  /* There wasn't a magic number.  But flags say that's OK.  */
+	  /* There wasn't a magic number.  But flags say that's OK.
+	     And we won't be checking the CRC at the end  */
+	  g->flags &= ~LAYERGZIP_FLAG_DO_CRC_AT_END;
 	} else if (mode == LAYERGZIP_FLAG_AUTOPOP) {
 	  /* There wasn't a magic number.  Muahahaha. Treat it as a normal
 	     file by popping ourself.  */
@@ -485,6 +490,9 @@ check_gzip_header_and_init (PerlIO *f) {
   }
 
   g->flags |= LAYERGZIP_FLAG_DEFL_INIT_DONE;
+
+  if (g->flags & LAYERGZIP_FLAG_DO_CRC_AT_END)
+    g->crc = crc32(0L, Z_NULL, 0);
 
   return LAYERGZIP_GZIPHEADER_GOOD;
 }
@@ -570,6 +578,7 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
     return -1;
   }
 
+
     /* autopop trumps lazy. (basically, it's going to confuse upstream far too
      much if on the first read we pop our buffered layer off to reveal an
      unbuffered layer below us)  */
@@ -584,6 +593,9 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
       return -1;
     }
   }
+
+  if (g->flags & LAYERGZIP_FLAG_DO_CRC_AT_END)
+    g->crc = crc32(0L, Z_NULL, 0);
 #if DEBUG_LAYERGZIP
   PerlIO_debug("PerlIOGzip_pushed f=%p g->status=%d g->flags=%02X\n",
 	       f, g->status, g->flags);
@@ -631,13 +643,46 @@ PerlIOGzip_close(PerlIO *f)
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
 
 #if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip_close f=%p %s za=%p\n",
-	       f,PerlIOBase(f)->tab->name, g->zs.zalloc);
+  PerlIO_debug("PerlIOGzip_close f=%p %s za=%p g->status=%d\n",
+	       f,PerlIOBase(f)->tab->name, g->zs.zalloc, (int) g->status);
 #endif
 
+  if ((g->flags & LAYERGZIP_FLAG_DO_CRC_AT_END)
+      && (g->status == LAYERGZIP_STATUS_ZSTREAM_END)) {
+    unsigned char buffer[8];
+    PerlIO *below = PerlIONext(f);
+    SSize_t got = PerlIO_read(below,buffer,8);
+
+#if DEBUG_LAYERGZIP
+    PerlIO_debug("PerlIOGzip_close g->crc=%08"UVxf" next=%p got=%d\n", g->crc,
+		 below, (int)got);
+#endif
+
+    if (got != 8)
+      code = -1;
+    else {
+      U32 crc = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16)
+	| (buffer[3] << 24);
+#if DEBUG_LAYERGZIP
+      PerlIO_debug("PerlIOGzip_close    crc=%08"UVxf"\n", crc);
+#endif
+      if (crc != g->crc & 0xFFFFFFFF)
+	code = -1;
+      else {
+	U32 len = buffer[4] | (buffer[5] << 8) | (buffer[5] << 16)
+	  | (buffer[6] << 24);
+#if DEBUG_LAYERGZIP
+	PerlIO_debug("PerlIOGzip_close    len=%08"UVxf" total=%08"UVxf"\n", len,
+		     g->zs.total_out);
+#endif
+	if (len != (g->zs.total_out & 0xFFFFFFFF))
+	  code = -1;
+      }
+    }
+  }
   if (g->flags & (LAYERGZIP_FLAG_DEFL_INIT_DONE
 		  | LAYERGZIP_FLAG_OURBUFFERBELOW))
-    code = PerlIOGzip_popped(f);
+    code |= PerlIOGzip_popped(f);
 
 #if DEBUG_LAYERGZIP
   PerlIO_debug("PerlIOGzip_close f=%p %d\n", f, (int)code);
@@ -733,14 +778,15 @@ PerlIOGzip_fill(PerlIO *f)
        blocking work by forcing as much output as possible if the input blocked.
     */
 #if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip_fill preinf  next_in=%p avail_in=%08"UVxf"\n",
-	       g->zs.next_in,g->zs.avail_in);
+    PerlIO_debug("PerlIOGzip_fill preinf  next_in=%p avail_in=%08"UVxf"\n",
+		 g->zs.next_in,g->zs.avail_in);
 #endif
     status = inflate (&(g->zs), avail ? Z_NO_FLUSH : Z_SYNC_FLUSH);
 #if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip_fill postinf next_in=%p avail_in=%08"UVxf" status=%d\n",
+    PerlIO_debug("PerlIOGzip_fill postinf next_in=%p avail_in=%08"UVxf" status=%d\n",
 	       g->zs.next_in,g->zs.avail_in, status);
 #endif
+  
     /* And we trust that zlib gets these two correct  */
     PerlIO_set_ptrcnt(n,g->zs.next_in,g->zs.avail_in);
 
@@ -770,6 +816,9 @@ PerlIOGzip_fill(PerlIO *f)
   if (g->zs.next_out != (Bytef *) b->buf) {
     /* Success if we got at least one byte. :-) */
     b->end = g->zs.next_out;
+    /* Update the crc */
+    if (g->flags & LAYERGZIP_FLAG_DO_CRC_AT_END)
+      g->crc = crc32(g->crc, b->buf, b->end - b->buf);
     PerlIOBase(f)->flags |= PERLIO_F_RDBUF;
     return 0;
   }
@@ -821,6 +870,8 @@ PerlIO_funcs PerlIO_gzip = {
 };
 
 MODULE = PerlIO::gzip		PACKAGE = PerlIO::gzip		
+
+PROTOTYPES: DISABLE
 
 BOOT:
 	PerlIO_define_layer(&PerlIO_gzip);

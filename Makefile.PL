@@ -1,5 +1,5 @@
-require 5.006; # Stop perl 5.005 or earler barfing on the v string
-require 5.7.0;
+require 5.007; # Stop perl 5.005 or earler barfing on the v string
+# require 5.7.0;
 use ExtUtils::MakeMaker;
 use Config;
 
@@ -29,8 +29,8 @@ WriteMakefile(
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM => 'gzip.pm', # retrieve abstract from module
        AUTHOR     => 'Nicholas Clark <nick@talking.bollo.cx>') : ()),
-    'LIBS'		=> ['-lz'], # e.g., '-lm'
-#    'DEFINE'		=> '-g -DDEBUG_LAYERGZIP', # e.g., '-DHAVE_SOMETHING'
+    'LIBS'		=> ['-lz'],
+    'DEFINE'		=> '-g -DDEBUG_LAYERGZIP',
 	# Insert -I. if you add *.h files later:
     'INC'		=> '', # e.g., '-I/usr/include/other'
 	# Un-comment this if you add C files to link with later:

@@ -16,3 +16,10 @@ Revision history for Perl extension Layer::Gzip.
       Added autopop mode.  There must be a better name for it.
       Changed order in PerlIOGzip_pushed to call PerlIObuf first (D'oh)
       and to pop without error in autopop mode with a write.
+
+0.05  Sun Feb 11 22:12:42 GMT 2001
+      Mmm. CRCs at the ends of files - maybe I should check them?
+      Now gives error on close if the z_stream is at the end and either
+      the CRC or the length recorded in the gzip trailer is wrong.  Doesn't
+      try these checks for files with no gzip header.
+      PROTOTYPES: DISABLE in the .xs
