@@ -1,13 +1,12 @@
 #!perl -w
-use 5.007003; # Stop perl 5.005 or earler barfing on the v string
+use 5.008; # Stop perl 5.005 or earler barfing on the v string
 # require 5.7.0;
 use ExtUtils::MakeMaker;
 use Config;
 
 unless ($Config{useperlio} eq 'define' and $Config{usesfio} eq 'false') {
   die <<BARF;
-You need perl 5.7.3 or later, configured to use perlio (and not to use sfio)
-perl 5.8 will do just fine.
+You need perl 5.8.0 or later, configured to use perlio (and not to use sfio)
 BARF
 }
 

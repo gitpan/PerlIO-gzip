@@ -487,7 +487,7 @@ check_gzip_header_and_init (PerlIO *f) {
     PerlIO_debug("check_gzip_header_and_init :-(. f=%p %s fl=%08"UVxf"\n",
 		 below,PerlIOBase(below)->tab->name, PerlIOBase(below)->flags);
 #endif
-    if (!PerlIO_push(below,&PerlIO_perlio,"r",&PL_sv_undef))
+    if (!PerlIO_push(aTHX_ below,&PerlIO_perlio,"r",&PL_sv_undef))
       return LAYERGZIP_GZIPHEADER_ERROR;
     g->flags |= LAYERGZIP_FLAG_OURBUFFERBELOW;
     below = PerlIONext(f);
@@ -509,7 +509,7 @@ check_gzip_header_and_init (PerlIO *f) {
 #endif
     if (g->flags & LAYERGZIP_FLAG_OURBUFFERBELOW) {
       g->flags &= ~LAYERGZIP_FLAG_OURBUFFERBELOW;
-      PerlIO_pop(below);
+      PerlIO_pop(aTHX_ below);
     }
     return LAYERGZIP_GZIPHEADER_ERROR;
   }
@@ -530,6 +530,7 @@ check_gzip_header_and_init (PerlIO *f) {
 
 static int
 write_gzip_header (PerlIO *f) {
+  dTHX;       /* fetch context */
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   char header[10];
   unsigned long timestamp = 0;
@@ -627,7 +628,7 @@ write_gzip_header_and_init (PerlIO *f) {
  *****************************************************************************/
 
 static SV *
-PerlIOGzip_getarg(PerlIO *f, CLONE_PARAMS *param, int flags)
+PerlIOGzip_getarg(pTHX_ PerlIO *f, CLONE_PARAMS *param, int flags)
 {
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   SV *sv;
@@ -663,8 +664,10 @@ PerlIOGzip_getarg(PerlIO *f, CLONE_PARAMS *param, int flags)
   return sv;
 }
 
+PerlIO_funcs PerlIO_gzip;
+
 static IV
-PerlIOGzip_pushed(PerlIO *f, const char *mode, SV *arg)
+PerlIOGzip_pushed(pTHX_ PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
 {
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   IV code = 0;
@@ -686,7 +689,7 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, SV *arg)
     PerlIO_debug("  len=%d argstr=%.*s\n", (int)len, (int)len, argstr);
 #endif
 
-  code = PerlIOBuf_pushed(f,mode,&PL_sv_undef);
+  code = PerlIOBuf_pushed(aTHX_ f,mode,&PL_sv_undef,&PerlIO_gzip);
   if (code)
     return code;
 
@@ -752,7 +755,7 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, SV *arg)
 #endif
     /* autopop trumps writing.  */
     if ((g->flags & LAYERGZIP_FLAG_READMODEMASK) == LAYERGZIP_FLAG_AUTOPOP) {
-	PerlIO_pop(f);
+	PerlIO_pop(aTHX_ f);
 	return 0;
     } else if ((g->flags & LAYERGZIP_FLAG_READMODEMASK) ==
 	       LAYERGZIP_FLAG_MAYBEGZIPHEADER) {
@@ -780,7 +783,7 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, SV *arg)
       code = check_gzip_header_and_init (f);
       if (code != LAYERGZIP_GZIPHEADER_GOOD) {
 	if (code == LAYERGZIP_GZIPHEADER_NOTGZIP) {
-	  PerlIO_pop(f);
+	  PerlIO_pop(aTHX_ f);
 #if DEBUG_LAYERGZIP
 	  PerlIO_debug("PerlIOGzip_pushed just popped f=%p\n", f);
 #endif
@@ -807,9 +810,8 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, SV *arg)
 }
 
 static IV
-PerlIOGzip_popped(PerlIO *f)
+PerlIOGzip_popped(pTHX_ PerlIO *f)
 {
-  dTHX;       /* fetch context */
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   IV code = 0;
 
@@ -840,7 +842,7 @@ PerlIOGzip_popped(PerlIO *f)
     PerlIO *below = PerlIONext(f);
     assert (below); /* This must be a layer, or our flags a screwed, or someone
 		       else has been screwing with our buffer.  */
-    PerlIO_pop(below);
+    PerlIO_pop(aTHX_ below);
     g->flags &= ~LAYERGZIP_FLAG_OURBUFFERBELOW;
   }
 
@@ -853,9 +855,8 @@ PerlIOGzip_popped(PerlIO *f)
 }
 
 static IV
-PerlIOGzip_close(PerlIO *f)
+PerlIOGzip_close(pTHX_ PerlIO *f)
 {
-  dTHX;
   IV code = 0;
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
 
@@ -934,20 +935,19 @@ PerlIOGzip_close(PerlIO *f)
   }
   if (g->flags & (LAYERGZIP_FLAG_DEFL_INIT_DONE | LAYERGZIP_FLAG_INFL_INIT_DONE
 		  | LAYERGZIP_FLAG_OURBUFFERBELOW))
-    code |= PerlIOGzip_popped(f);
+    code |= PerlIOGzip_popped(aTHX_ f);
 
 #if DEBUG_LAYERGZIP
   PerlIO_debug("PerlIOGzip_close f=%p %d\n", f, (int)code);
 #endif
 
-  code |= PerlIOBuf_close(f);	/* Call it whatever.  */
+  code |= PerlIOBuf_close(aTHX_ f);	/* Call it whatever.  */
   return code ? -1 : 0;		/* Only returns 0 if both succeeded */
 }
 
 static IV
-PerlIOGzip_fill(PerlIO *f)
+PerlIOGzip_fill(pTHX_ PerlIO *f)
 {
-  dTHX;       /* fetch context */
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   PerlIOBuf *b = PerlIOSelf(f,PerlIOBuf);
   PerlIO *n = PerlIONext(f);
@@ -1086,7 +1086,7 @@ PerlIOGzip_fill(PerlIO *f)
 }
 
 IV
-PerlIOGzip_flush(PerlIO *f) {
+PerlIOGzip_flush(pTHX_ PerlIO *f) {
 #if DEBUG_LAYERGZIP
   PerlIO_debug("PerlIOGzip_flush f=%p fl=%08"UVxf"\n", f,
 	       PerlIOBase(f)->flags);
@@ -1203,7 +1203,7 @@ PerlIOGzip_flush(PerlIO *f) {
 /* Hmm. These need to be public?  */
 
 static IV
-PerlIOGzip_seek_fail(PerlIO *f, Off_t offset, int whence)
+PerlIOGzip_seek_fail(pTHX_ PerlIO *f, Off_t offset, int whence)
 {
   return -1;
 }
@@ -1216,12 +1216,14 @@ PerlIOGzip_dup(pTHX_ PerlIO *f, PerlIO *o, CLONE_PARAMS *param, int flags)
 }
 
 PerlIO_funcs PerlIO_gzip = {
+  sizeof(PerlIO_funcs),
   "gzip",
   sizeof(PerlIOGzip),
   PERLIO_K_BUFFERED, /* XXX destruct */
   PerlIOGzip_pushed,
   PerlIOGzip_popped,
   PerlIOBuf_open,
+  PerlIOBase_binmode,
   PerlIOGzip_getarg,
   PerlIOBase_fileno,
   PerlIOGzip_dup,
@@ -1249,4 +1251,4 @@ MODULE = PerlIO::gzip		PACKAGE = PerlIO::gzip
 PROTOTYPES: DISABLE
 
 BOOT:
-	PerlIO_define_layer(&PerlIO_gzip);
+	PerlIO_define_layer(aTHX_ &PerlIO_gzip);

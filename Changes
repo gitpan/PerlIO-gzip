@@ -69,3 +69,10 @@ Revision history for Perl extension Layer::Gzip.
 
 0.12  Mon Mar 18 21:03:52 GMT 2002
       Catch up with the 5.7.3 perlio API changes.
+
+0.13  Tue Jul  2 21:55:08 BST 2002
+      Richard Clamp sent me a complete patch to catch up with the 5.8.0-RC2
+      perlio API changes, and sprinkles C<pTHX>ie dust to make it compile for
+      a threaded perl. (But please don't create any threads or fork on Win32
+      while a gzip layer is active, as bad things will happen (duplicate
+      frees))

@@ -1,11 +1,11 @@
-PerlIO::gzip version 0.12
+PerlIO::gzip version 0.13
 =========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
 Alpha at the moment, does now (well, since 0.06, oops) gzip and gunzip.
 **DON'T** trust it with your data.
 
-YOU NEED PERL 5.7.3 or later. 5.8 will do just fine.
+YOU NEED PERL 5.8.0 or later.
 
 INSTALLATION
 
@@ -21,7 +21,7 @@ That echo statement is particularly important.
 
 DEPENDENCIES
 
-This module requires perl 5.7.3 or later compiler with PerlIO.
+This module requires perl 5.8.0 or later compiler with PerlIO.
 (which is now the default), and the zlib compression library.
 
 BUGS
@@ -33,6 +33,9 @@ TODO
 
 Lots:
 
+Check that concatenating to files works. Add a way of reading multiple
+contactenated gzip files.
+Test more
 Add an open method so that things we don't like (read/write opens) are faulted
 early (ie before a file is created on disk) and so that we add "b" flag to
 the open for the layer below.
