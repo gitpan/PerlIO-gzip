@@ -941,7 +941,23 @@ PerlIOGzip_close(pTHX_ PerlIO *f)
   PerlIO_debug("PerlIOGzip_close f=%p %d\n", f, (int)code);
 #endif
 
+#if PERL_VERSION > 8 || PERL_SUBVERSION > 0
+  /* 5.8.1 correctly exports PerlIOBuf_close */
   code |= PerlIOBuf_close(aTHX_ f);	/* Call it whatever.  */
+#else
+  /* 5.8.0 doesn't, so platforms such as AIX and Windows can't see it.
+     Inline it here:  */
+  code |= PerlIOBase_close(aTHX_ f);
+  {
+    PerlIOBuf *b = PerlIOSelf(f, PerlIOBuf);
+    if (b->buf && b->buf != (STDCHAR *) & b->oneword) {
+      Safefree(b->buf);
+    }
+    b->buf = NULL;
+    b->ptr = b->end = b->buf;
+    PerlIOBase(f)->flags &= ~(PERLIO_F_RDBUF | PERLIO_F_WRBUF);
+  }
+#endif
   return code ? -1 : 0;		/* Only returns 0 if both succeeded */
 }
 

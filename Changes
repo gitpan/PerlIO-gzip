@@ -84,3 +84,9 @@ Revision history for Perl extension Layer::Gzip.
       Well spotted valgrind.
       Use valgrind. http://developer.kde.org/~sewardj/
       It's far more effective than coffee.
+
+0.15  Tue Jul 15 21:07:11 BST 2003
+      gzip.xs was using PerlIOBuf_close, which isn't on the list of exported
+      symbols. Hence gzip.xs won't link on platforms such as AIX and Windows.
+      This is fixed in 5.8.1 - Inline the code for PerlIOBuf_close when
+      building for 5.8.0.

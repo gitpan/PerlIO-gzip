@@ -1,4 +1,4 @@
-PerlIO::gzip version 0.14
+PerlIO::gzip version 0.15
 =========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
@@ -58,4 +58,4 @@ You may distribute this work under the terms of either the GNU General
 Public License or the Artistic License, as specified in perl's README
 file.
 
-Copyright © 2001,2002 Nicholas Clark
+Copyright © 2001-2003 Nicholas Clark
