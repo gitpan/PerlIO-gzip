@@ -66,3 +66,6 @@ Revision history for Perl extension Layer::Gzip.
       function for cloning layers across. (both within and across ithreads)
       Currently I don't want to pretend that PerlIO::gzip can cope with this,
       hence it will croak. Fixing this properly is a TODO.
+
+0.12  Mon Mar 18 21:03:52 GMT 2002
+      Catch up with the 5.7.3 perlio API changes.

@@ -627,7 +627,7 @@ write_gzip_header_and_init (PerlIO *f) {
  *****************************************************************************/
 
 static SV *
-PerlIOGzip_getarg(PerlIO *f)
+PerlIOGzip_getarg(PerlIO *f, CLONE_PARAMS *param, int flags)
 {
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   SV *sv;
@@ -1209,7 +1209,7 @@ PerlIOGzip_seek_fail(PerlIO *f, Off_t offset, int whence)
 }
 
 PerlIO *
-PerlIOGzip_dup(pTHX_ PerlIO *f, PerlIO *o, CLONE_PARAMS *param)
+PerlIOGzip_dup(pTHX_ PerlIO *f, PerlIO *o, CLONE_PARAMS *param, int flags)
 {
   croak ("PerlIO::gzip can't yet clone active layers");
   return NULL;
