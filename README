@@ -1,5 +1,5 @@
-PerlIO/gzip version 0.03
-========================
+PerlIO::gzip version 0.04
+=========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
 Alpha at the moment, only gunzips.

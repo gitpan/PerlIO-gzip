@@ -11,3 +11,8 @@ Revision history for Perl extension Layer::Gzip.
       Change name from Layer::Gzip to PerlIO::gzip following feedback on p5p.
       Add checks to Makefile.PL to ensure you have 5.7.0 [or later :-)] and
       PerlIO configure.
+
+0.04  Tue Feb  6 23:56:16 GMT 2001
+      Added autopop mode.  There must be a better name for it.
+      Changed order in PerlIOGzip_pushed to call PerlIObuf first (D'oh)
+      and to pop without error in autopop mode with a write.

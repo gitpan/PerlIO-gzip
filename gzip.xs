@@ -43,8 +43,12 @@
 #define LAYERGZIP_STATUS_CONFUSED	3
 #define LAYERGZIP_STATUS_1STCHECKHEADER	4
 
+#define LAYERGZIP_FLAG_GZIPHEADER	0x00
 #define LAYERGZIP_FLAG_NOGZIPHEADER	0x01 /* No gzip file header */
 #define LAYERGZIP_FLAG_MAYBEGZIPHEADER	0x02 /* Look for magic number */
+#define LAYERGZIP_FLAG_AUTOPOP		0x03
+#define LAYERGZIP_FLAG_READMODEMASK	0x03
+
 #define LAYERGZIP_FLAG_LAZY		0x04 /* defer header check */
 #define LAYERGZIP_FLAG_OURBUFFERBELOW	0x08 /* We own the buffer below us */
 #define LAYERGZIP_FLAG_DEFL_INIT_DONE	0x10 /* We own the buffer below us */
@@ -53,6 +57,8 @@
 #define LAYERGZIP_GZIPHEADER_ERROR	1
 #define LAYERGZIP_GZIPHEADER_BADMAGIC	2
 #define LAYERGZIP_GZIPHEADER_BADMETHOD	3
+#define LAYERGZIP_GZIPHEADER_NOTGZIP	4    /* BEWARE. If you get this your
+						buf pointer is now invald  */
 
 #define ZIP_DEFLATED		8
 
@@ -414,18 +420,26 @@ check_gzip_header_and_init (PerlIO *f) {
 	       f, below, g->flags);
 #endif
 
-  if (!(g->flags & LAYERGZIP_FLAG_NOGZIPHEADER)) {
+  if ((g->flags & LAYERGZIP_FLAG_READMODEMASK) != LAYERGZIP_FLAG_NOGZIPHEADER) {
     code = check_gzip_header (f);
     if (code != LAYERGZIP_GZIPHEADER_GOOD) {
 #if DEBUG_LAYERGZIP
       PerlIO_debug("PerlIOGzip check_gzip_header_and_init code=%d\n", code);
 #endif
-      if (!(code == LAYERGZIP_GZIPHEADER_BADMAGIC
-	    && g->flags & LAYERGZIP_FLAG_MAYBEGZIPHEADER)) {
-	/* There was supposed to be a header and there wasn't.  */
+      if (code != LAYERGZIP_GZIPHEADER_BADMAGIC)
 	return code;
+      else {
+	int mode = g->flags & LAYERGZIP_FLAG_READMODEMASK;
+	if (mode == LAYERGZIP_FLAG_MAYBEGZIPHEADER) {
+	  /* There wasn't a magic number.  But flags say that's OK.  */
+	} else if (mode == LAYERGZIP_FLAG_AUTOPOP) {
+	  /* There wasn't a magic number.  Muahahaha. Treat it as a normal
+	     file by popping ourself.  */
+	  return LAYERGZIP_GZIPHEADER_NOTGZIP;
+	} else {
+	  return code;
+	}
       }
-      /* There wasn't a magic number.  But flags say that's OK.  */
     }
   }
   g->status = LAYERGZIP_STATUS_NORMAL;
@@ -489,10 +503,13 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
 	       PerlIOBase(f)->flags, g);
   if (arg)
     PerlIO_debug("  len=%d arg=%.*s\n", (int)len, (int)len, arg);
-    
 #endif
 
-  g->flags = 0;
+  code = PerlIOBuf_pushed(f,mode,arg,len);
+  if (code)
+    return code;
+
+  g->flags = LAYERGZIP_FLAG_GZIPHEADER;
   g->status = LAYERGZIP_STATUS_1STCHECKHEADER;
 
   if (len) {
@@ -509,20 +526,26 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
 
       if (this_len == 4) {
 	if (memEQ (arg, "none", 4)) {
+	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
 	  g->flags |= LAYERGZIP_FLAG_NOGZIPHEADER;
-	  g->flags &= ~LAYERGZIP_FLAG_MAYBEGZIPHEADER;
 	} else if (memEQ (arg, "auto", 4)) {
+	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
 	  g->flags |= LAYERGZIP_FLAG_MAYBEGZIPHEADER;
-	  g->flags &= ~LAYERGZIP_FLAG_NOGZIPHEADER;
 	} 	else if (memEQ (arg, "lazy", 4))
 	  g->flags |= LAYERGZIP_FLAG_LAZY;
 	else if (memEQ (arg, "gzip", 4)) {
-	  g->flags &= ~(LAYERGZIP_FLAG_NOGZIPHEADER
-			| LAYERGZIP_FLAG_NOGZIPHEADER);
+	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
+	  g->flags |= LAYERGZIP_FLAG_GZIPHEADER;
+	} else
+	  arg_bad = 1;
+      } else if (this_len == 7) {
+	if (memEQ (arg, "autopop", 7)) {
+	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
+	  g->flags |= LAYERGZIP_FLAG_AUTOPOP;
 	} else
 	  arg_bad = 1;
       }
-      
+
       if (arg_bad)
 	Perl_warn(aTHX_ "perlio: layer :gzip, unregonised argument \"%.*s\"",
 		  (int)this_len, arg);
@@ -532,26 +555,39 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
       arg = comma + 1;
     }
   }
-       
-  if (!(g->flags & LAYERGZIP_FLAG_LAZY)) {
-    code = check_gzip_header_and_init (f);
-    if (code != LAYERGZIP_GZIPHEADER_GOOD)
-      return -1;
-  }
-#if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip_pushed f=%p g->status=%d g->flags=%02X\n",
-	       f, g->status, g->flags);
-#endif
-  code = PerlIOBuf_pushed(f,mode,arg,len);
-  if (code)
-    return code;
+  
+
   if (PerlIOBase(f)->flags & PERLIO_F_CANWRITE) {
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip_pushed f=%p fl=%08"UVxf" including write (%X)\n",
 		 f, PerlIOBase(f)->flags, PERLIO_F_CANWRITE);
 #endif
+    /* autopop trumps writing.  */
+    if ((g->flags & LAYERGZIP_FLAG_READMODEMASK) == LAYERGZIP_FLAG_AUTOPOP) {
+	PerlIO_pop(f);
+	return 0;
+      }
     return -1;
   }
+
+    /* autopop trumps lazy. (basically, it's going to confuse upstream far too
+     much if on the first read we pop our buffered layer off to reveal an
+     unbuffered layer below us)  */
+  if (!(g->flags & LAYERGZIP_FLAG_LAZY)
+      || ((g->flags & LAYERGZIP_FLAG_READMODEMASK) == LAYERGZIP_FLAG_AUTOPOP)) {
+    code = check_gzip_header_and_init (f);
+    if (code != LAYERGZIP_GZIPHEADER_GOOD) {
+      if (code == LAYERGZIP_GZIPHEADER_NOTGZIP) {
+	PerlIO_pop(f);
+	return 0;
+      }
+      return -1;
+    }
+  }
+#if DEBUG_LAYERGZIP
+  PerlIO_debug("PerlIOGzip_pushed f=%p g->status=%d g->flags=%02X\n",
+	       f, g->status, g->flags);
+#endif
   return 0;
 }
 
@@ -755,7 +791,7 @@ PerlIO_seek_fail(PerlIO *f, Off_t offset, int whence)
 }
 
 
-static PerlIO_funcs PerlIO_gzip = {
+PerlIO_funcs PerlIO_gzip = {
   "gzip",
   sizeof(PerlIOGzip),
   PERLIO_K_BUFFERED,

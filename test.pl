@@ -7,7 +7,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test;
-BEGIN { plan tests => 40 };
+BEGIN { plan tests => 50 };
 use File::Compare; # This is standard in all distributions that have layers.
 use PerlIO::gzip;
 ok(1); # If we made it this far, we're ok.
@@ -247,22 +247,73 @@ while (-f "perl.gz") {
   unlink "perl.gz" or die $!;
 }
 
+# OK. autopop mode. muhahahahaha
+
+if (open FOO, "<:gzip(autopop)", "README") {
+  print "ok 38\n";
+} else {
+  print "not ok 38\n";
+}
+print "not " unless defined <FOO>;
+print "ok 39\n";
+
+# Verify that line 2 of REAME starts with = signs
+$line = <FOO>;
+print "not " unless $line =~ /^======/;
+print "ok 40\n";
+
+if (open FOO, "<:gzip(autopop)", "ok3.gz") {
+  print "ok 41\n";
+} else {
+  print "not ok 41\n";
+}
+while (<FOO>) {
+  if ($_ eq "ok 3\n") {
+    print "ok 42\n";
+  } else {
+    print "not ok 42 # $_\n";
+  }
+}
+
+# autopop writes should work
+if (open FOO, ">:gzip(autopop)", "empty") {
+  print "ok 43\n";
+} else {
+  print "not ok 43\n";
+}
+if (print FOO "ok 46\n") {
+  print "ok 44\n";
+} else {
+  print "not ok 44\n";
+}
+if (open FOO, "<empty") {
+  print "ok 45\n";
+} else {
+  print "not 45\n";
+}
+print while <FOO>;
+if (close FOO) {
+  print "ok 47\n";
+} else {
+  print "not ok 47\n";
+}
+
 
 # Writes don't work (yet)
 if (open FOO, ">:gzip", "empty") {
-  print "not ok 38\n";
+  print "not ok 48\n";
 } else {
-  print "ok 38\n";
+  print "ok 48\n";
 }
 if (open FOO, ">>:gzip", "empty") {
-  print "not ok 39\n";
+  print "not ok 49\n";
 } else {
-  print "ok 39\n";
+  print "ok 49\n";
 }
 if (open FOO, "+<:gzip", "empty") {
-  print "not ok 40\n";
+  print "not ok 50\n";
 } else {
-  print "ok 40\n";
+  print "ok 50\n";
 }
 while (-f "empty") {
   # VMS is going to have several of these, isn't it?
