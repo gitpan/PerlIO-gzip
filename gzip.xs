@@ -62,7 +62,7 @@
 #define LAYERGZIP_GZIPHEADER_BADMAGIC	2
 #define LAYERGZIP_GZIPHEADER_BADMETHOD	3
 #define LAYERGZIP_GZIPHEADER_NOTGZIP	4    /* BEWARE. If you get this your
-						buf pointer is now invald  */
+						buf pointer is now invalid  */
 
 
 #ifndef LAYERGZIP_DEFAULT_OS_TYPE
@@ -80,7 +80,7 @@ typedef struct {
   unsigned long	crc;		/* ongoing CRC of data */
   long		time;		/* timestamp to write to the header	*/
   Bytef		*outbuf;	/* Our malloc'd output buffer		*/
-  int		level;		/* compession level for deflate		*/
+  int		level;		/* compression level for deflate	*/
   unsigned char os_type;	/* OS type flag for the header		*/
 } PerlIOGzip;
 
@@ -109,21 +109,21 @@ get_more (PerlIO *below, SSize_t wanted, SV **sv, unsigned char **buffer) {
 #endif
 
   if (!*sv) {
-    /* We know there were not enough bytes available in the layer below's buffer
-       We know that we started at the beginning of it, so we can calculate
-       how many bytes we've passed over (but not consumed, as we didn't
-       alter the pointer and count).  */
+    /* We know there were not enough bytes available in the layer below's
+       buffer.  We know that we started at the beginning of it, so we can
+       calculate how many bytes we've passed over (but not consumed, as we
+       didn't alter the pointer and count).  */
     done = *buffer - (unsigned char*) PerlIO_get_ptr(below);
     get = done + wanted; /* Need to read the lot into our SV.   */
     *sv = newSVpvn("", 0);
     if (!*sv)
       return -1;
-    read_here = *buffer = SvGROW(*sv, get);
+    read_here = SvGROW(*sv, get);
+    *buffer = read_here + done;
   } else {
     done = SvCUR(*sv);
-    *buffer = SvGROW(*sv, done + wanted);
+    read_here = *buffer = SvGROW(*sv, done + wanted) + done;
     get = wanted; /* Only need to read the next section  */
-    read_here = *buffer + done;
   }
 
 #if DEBUG_LAYERGZIP
@@ -142,13 +142,13 @@ get_more (PerlIO *below, SSize_t wanted, SV **sv, unsigned char **buffer) {
     return read;
   }
   if (read_here == *buffer) {
-    /* We were reading into the whole buffer.  */
-    SvCUR_set(*sv, read);
-    return read - done;
+    /* We were appending.  */
+    SvCUR(*sv) += read;
+    return read;
   }
-  /* We were appending.  */
-  SvCUR(*sv) += read;
-  return read;
+  /* We were reading into the whole buffer.  */
+  SvCUR_set(*sv, read);
+  return read - done;
 }
 
 
@@ -178,7 +178,8 @@ eat_nul (PerlIO *below, SV **sv, unsigned char **buffer) {
 
       *buffer = here;
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip eat_nul found it! here=%p end=%p\n", here, end);
+      PerlIO_debug("PerlIOGzip eat_nul found it! here=%p end=%p, returning %08"
+		   UVxf"\n", here, end, (UV) (end-here));
 #endif
       return end-here;
     }
@@ -216,7 +217,8 @@ eat_nul (PerlIO *below, SV **sv, unsigned char **buffer) {
       
       *buffer = here;
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip eat_nul found it! here=%p end=%p\n", here, end);
+      PerlIO_debug("PerlIOGzip eat_nul found it! here=%p end=%p, returning %08"
+		   UVxf"\n", here, end, (UV) (end-here));
 #endif
       return end-here;
     }
@@ -299,6 +301,7 @@ check_gzip_header (PerlIO *f) {
       SvREFCNT_dec(temp);
       return code;
     }
+    SvCUR_set(temp, avail);
   }
 
 #if DEBUG_LAYERGZIP
@@ -421,7 +424,7 @@ check_gzip_header (PerlIO *f) {
       STRLEN len;
       STDCHAR *ptr = SvPV(temp, len);
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip check_gzip_header failed. unreading ptr=%p len=%08"UVxf"\n", ptr, len);
+      PerlIO_debug("PerlIOGzip check_gzip_header failed. unreading ptr=%p len=%08"UVxf"\n", ptr, (UV)len);
 #endif
       PerlIO_unread (below, ptr, len);
       SvREFCNT_dec(temp);
@@ -478,7 +481,7 @@ check_gzip_header_and_init (PerlIO *f) {
 		 below,PerlIOBase(below)->tab->name, PerlIOBase(below)->flags);
 #endif
   } else {
-    /* Bah. Layer below us doesn't suport FASTGETS. So we need to add a layer
+    /* Bah. Layer below us doesn't support FASTGETS. So we need to add a layer
        to provide our input buffer.  */
 #if DEBUG_LAYERGZIP
     PerlIO_debug("check_gzip_header_and_init :-(. f=%p %s fl=%08"UVxf"\n",
@@ -599,8 +602,8 @@ write_gzip_header_and_init (PerlIO *f) {
   /* zlib docs say that next_out and avail_out are unchanged by init.
      Implication is that they don't yet need to be initialised.  */
 
-  if (deflateInit2(z, g->level, Z_DEFLATED, -MAX_WBITS, LAYERGZIP_DEF_MEM_LEVEL,
-		   Z_DEFAULT_STRATEGY) != Z_OK) {
+  if (deflateInit2(z, g->level, Z_DEFLATED, -MAX_WBITS,
+		   LAYERGZIP_DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY) != Z_OK) {
 #if DEBUG_LAYERGZIP
     PerlIO_debug("write_gzip_header_and_init failed to deflateInit2");
 #endif
@@ -683,7 +686,7 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
 
       if (arg_bad) {
 	dTHX;       /* fetch context */
-	Perl_warn(aTHX_ "perlio: layer :gzip, unregonised argument \"%.*s\"",
+	Perl_warn(aTHX_ "perlio: layer :gzip, unrecognised argument \"%.*s\"",
 		  (int)this_len, arg);
       }
 
@@ -730,6 +733,9 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
       if (code != LAYERGZIP_GZIPHEADER_GOOD) {
 	if (code == LAYERGZIP_GZIPHEADER_NOTGZIP) {
 	  PerlIO_pop(f);
+#if DEBUG_LAYERGZIP
+	  PerlIO_debug("PerlIOGzip_pushed just popped f=%p\n", f);
+#endif
 	  return 0;
 	}
 	return -1;
@@ -737,8 +743,8 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
     }
   } else {
 #if DEBUG_LAYERGZIP
-    PerlIO_debug("PerlIOGzip_pushed f=%p fl=%08"UVxf" neither read nor write\n",
-		 f, PerlIOBase(f)->flags);
+    PerlIO_debug("PerlIOGzip_pushed f=%p fl=%08"UVxf
+		 " neither read nor write\n", f, PerlIOBase(f)->flags);
 #endif
     return -1;
   }
@@ -831,8 +837,8 @@ PerlIOGzip_close(PerlIO *f)
       SSize_t got = PerlIO_read(below,buffer,8);
 
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip_close g->crc=%08"UVxf" next=%p got=%d\n", g->crc,
-		   below, (int)got);
+      PerlIO_debug("PerlIOGzip_close g->crc=%08"UVxf" next=%p got=%d\n",
+		   g->crc, below, (int)got);
 #endif
 
       if (got != 8)
@@ -904,7 +910,8 @@ PerlIOGzip_fill(PerlIO *f)
   PerlIO_debug("PerlIOGzip_fill f=%p g->status=%d\n", f, g->status);
 #endif
 
-  if (g->status == LAYERGZIP_STATUS_CONFUSED || g->status == LAYERGZIP_STATUS_ZSTREAM_END)
+  if (g->status == LAYERGZIP_STATUS_CONFUSED ||
+      g->status == LAYERGZIP_STATUS_ZSTREAM_END)
     return -1;	/* Error state, or EOF has been seen.  */
 
   if (g->status == LAYERGZIP_STATUS_1ST_DO_HEADER) {
@@ -968,7 +975,8 @@ PerlIOGzip_fill(PerlIO *f)
 	} else {
 	  avail = 0;
 #if DEBUG_LAYERGZIP
-	  PerlIO_debug("PerlIOGzip_fill how did I get here?, avail=%08"UVxf"\n",avail);
+	  PerlIO_debug("PerlIOGzip_fill how did I get here?, avail=%08"UVxf
+		       "\n",avail);
 #endif
 	}
       }
@@ -979,8 +987,8 @@ PerlIOGzip_fill(PerlIO *f)
     g->zs.next_in = (Bytef *) PerlIO_get_ptr(n);
     /* Z_SYNC_FLUSH to get as much output as possible if there's no input left.
        This may be pointless, but I'm hoping that this is enough to make non-
-       blocking work by forcing as much output as possible if the input blocked.
-    */
+       blocking work by forcing as much output as possible if the input
+       blocked.  */
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip_fill preinf  next_in=%p avail_in=%08"UVxf"\n",
 		 g->zs.next_in,g->zs.avail_in);
@@ -1006,11 +1014,11 @@ PerlIOGzip_fill(PerlIO *f)
 
   }  /* loop until we read enough data.
 	hopefully not literally forever. Z_BUF_ERROR should be generated if
-	there is a buffer problem.  Z_OK will only appear if there is progress -
-	ie either input is consumed (it must be available for this) or output is
-	generated (there must be space for this).  Hence not consuming any input
-	whilst also not generating any more output is an error we will spot and
-	barf on.  */
+	there is a buffer problem.  Z_OK will only appear if there is progress
+	- ie either input is consumed (it must be available for this) or output
+	is generated (there must be space for this).  Hence not consuming any
+	input whilst also not generating any more output is an error we will
+	spot and barf on.  */
 
 #if DEBUG_LAYERGZIP
   PerlIO_debug("PerlIOGzip_fill leaving next_out=%p avail_out=%08"UVxf"\n",
@@ -1032,7 +1040,8 @@ PerlIOGzip_fill(PerlIO *f)
 IV
 PerlIOGzip_flush(PerlIO *f) {
 #if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip_flush f=%p fl=%08"UVxf"\n", f, PerlIOBase(f)->flags);
+  PerlIO_debug("PerlIOGzip_flush f=%p fl=%08"UVxf"\n", f,
+	       PerlIOBase(f)->flags);
 #endif
   if (PerlIOBase(f)->flags & PERLIO_F_ERROR)
     return -1;
@@ -1076,8 +1085,9 @@ PerlIOGzip_flush(PerlIO *f) {
       int status;
 #if DEBUG_LAYERGZIP
       PerlIO_debug("PerlIOGzip_flush predef  next_in= %p avail_in= %08"UVxf"\n"
-		   "                         next_out=%p avail_out=%08"UVxf"\n",
-		   g->zs.next_in,g->zs.avail_in,g->zs.next_out,g->zs.avail_out);
+		   "                         next_out=%p avail_out=%08"UVxf
+		   "\n", g->zs.next_in, g->zs.avail_in, g->zs.next_out,
+		   g->zs.avail_out);
 #endif
       status = deflate (&(g->zs), (g->flags & LAYERGZIP_FLAG_CLOSING_FILE)
 			? Z_FINISH : 0);
@@ -1124,7 +1134,8 @@ PerlIOGzip_flush(PerlIO *f) {
 	}
       } else {
 #if DEBUG_LAYERGZIP
-	PerlIO_debug("PerlIOGzip_flush deflate failed %d, data lost\n", status);
+	PerlIO_debug("PerlIOGzip_flush deflate failed %d, data lost\n",
+		     status);
 #endif
 	PerlIOBase(f)->flags |= PERLIO_F_ERROR;
 	return -1;

@@ -37,3 +37,11 @@ Revision history for Perl extension Layer::Gzip.
       s/to/too/ in the BARF message in Makefile.PL [1 character change. Look
       at the paperwork that generated :-)]
       use XSLoader rather than Dynaloader.
+
+0.08  Mon Feb 19 21:14:45 GMT 2001
+      fix bug in get_more's return value that basically prevented you from
+      reading any header with embedded filename from an unbuffered layer.
+      [Obscure, but it's suppoed to work with unbuffered] However, still
+      problems with unread, so you can't inflate any gzip file with an
+      original filename (or comment) in the header. This is related to the
+      /* fix me */ mentioned in perlio.c. Hopefully it will be soon.

@@ -1,12 +1,16 @@
-PerlIO::gzip version 0.07
+PerlIO::gzip version 0.08
 =========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
 Alpha at the moment, does now (well, since 0.06, oops) gzip and gunzip.
 **DON'T** trust it with your data.
 
-YOU NEED PERL 5.7.0 or later
-                            yes. this only works on UNSTABLE DEVELOPMENT PERL
+YOU NEED PERL later than 5.7.0 
+                              yes. this only works on UNSTABLE DEVELOPMENT PERL
+
+Worse than that, you need at least devel 8826 or test 76 will hang expecting
+input from STDIN [probably your keyboard. Type something :-)]
+
 
 INSTALLATION
 

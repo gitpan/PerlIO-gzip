@@ -459,24 +459,21 @@ if (-s $Config{'sh'}) {
 
   # Unbuffered layer below worked from 0.01, but no standard regression tests
   # for it (I just ran the regular tests with PERLIO=unix)
-  if (0) { # hmm. perlio doesn't like this idea yet:
-    if (open GZ, "<:unix:gzip", "foo") {
-      print "ok 76\n";
-    } else {
-      print "not ok 76\n";
-    }
-    if (compare (\*GZ, $Config{'sh'}) == 0) {
-      print "ok 77\n";
-    } else {
-      print "not ok 77\n";
-    }
-    if (close GZ) {
-      print "ok 78\n";
-    } else {
-      print "not ok 78\n";
-    }
+  # you'll need 8825 (ish) or later for these three to work
+  if (open GZ, "<:unix:gzip", "foo") {
+    print "ok 76\n";
   } else {
-    print "ok $_ # skipping\n" foreach (76..78);
+    print "not ok 76\n";
+  }
+  if (compare (\*GZ, $Config{'sh'}) == 0) {
+    print "ok 77\n";
+  } else {
+    print "not ok 77\n";
+  }
+  if (close GZ) {
+    print "ok 78\n";
+  } else {
+    print "not ok 78\n";
   }
 } else {
   print "ok $_ # skipping\n" foreach (70..78);

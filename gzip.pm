@@ -6,7 +6,7 @@ use warnings;
 
 use XSLoader ();
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 XSLoader::load "PerlIO::gzip", $VERSION;
 
@@ -21,15 +21,15 @@ PerlIO::gzip - Perl extension to provide a PerlIO layer to gzip/gunzip
 
   use PerlIO::gzip;
   open FOO, "<:gzip", "file.gz" or die $!;
-  print while <FOO>; # And it will be uncompressed.
+  print while <FOO>; # And it will be uncompressed...
 
-  binmode FOO, ":gzip(none)" # Starts reading deflate stream from here on.
+  binmode FOO, ":gzip(none)" # Starts reading deflate stream from here on
 
 =head1 DESCRIPTION
 
 PerlIO::gzip provides a PerlIO layer that manipulates files in the format used
 by the C<gzip> program.  Compression and Decompression are implemented, but
-not together.  If you atttempt to open a file for reading and writing the open
+not together.  If you attempt to open a file for reading and writing the open
 will fail.
 
 =head1 EXPORT
@@ -108,6 +108,8 @@ Nicholas Clark, E<lt>nick@talking.bollo.cxE<gt>
 
 =head1 SEE ALSO
 
-L<perl>, L<gzip>.
+L<perl>, L<gzip>, L<rfc 1952|http://www.ietf.org/rfc/rfc1952.txt> (the gzip
+file format specification), L<rfc 1951|http://www.ietf.org/rfc/rfc1951.txt>
+(DEFLATE compressed data format specification)
 
 =cut

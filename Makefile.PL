@@ -30,7 +30,7 @@ WriteMakefile(
       (ABSTRACT_FROM => 'gzip.pm', # retrieve abstract from module
        AUTHOR     => 'Nicholas Clark <nick@talking.bollo.cx>') : ()),
     'LIBS'		=> ['-lz'],
-    # 'DEFINE'		=> '-Wall -DDEBUG_LAYERGZIP',
+#    'DEFINE'		=> '-g -Wall -DDEBUG_LAYERGZIP',
 	# Insert -I. if you add *.h files later:
     'INC'		=> '', # e.g., '-I/usr/include/other'
 	# Un-comment this if you add C files to link with later:
