@@ -199,7 +199,7 @@ eat_nul (PerlIO *below, SV **sv, unsigned char **buffer) {
     SSize_t avail = get_more (below, munch_size, sv, buffer);
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip eat_nul sv=%p buffer=%p wanted=%08"UVxf" avail=%08"UVxf"\n",
-		 *sv, *buffer, munch_size, avail);
+		 *sv, *buffer, munch_size, (UV)avail);
 #endif
     if (avail == -1 || avail == 0)
       return -1;
@@ -264,7 +264,7 @@ check_gzip_header (PerlIO *f) {
     avail = 0;
 
 #if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip check_gzip_header avail=%08"UVxf"\n", avail);
+  PerlIO_debug("PerlIOGzip check_gzip_header avail=%08"UVxf"\n", (UV)avail);
 #endif
 
   if (avail >= GZIP_HEADERSIZE)
@@ -280,7 +280,7 @@ check_gzip_header (PerlIO *f) {
 #endif
     avail = PerlIO_read(below,header,GZIP_HEADERSIZE);
 #if DEBUG_LAYERGZIP
-    PerlIO_debug("PerlIOGzip check_gzip_header read=%08"UVxf"\n", avail);
+    PerlIO_debug("PerlIOGzip check_gzip_header read=%08"UVxf"\n", (UV)avail);
 #endif
     if (avail < 0)
       code = LAYERGZIP_GZIPHEADER_ERROR;
@@ -341,7 +341,8 @@ check_gzip_header (PerlIO *f) {
       avail -= 2;
 
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf" extra len=%d\n", header, avail, (int)len);
+      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf
+		   " extra len=%d\n", header, (UV)avail, (int)len);
 #endif
 
       if (avail < len) {
@@ -358,7 +359,8 @@ check_gzip_header (PerlIO *f) {
 
     if (flags & GZIP_HAS_ORIGNAME) {
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf" has origname\n", header, avail);
+      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf
+		   " has origname\n", header, (UV)avail);
 #endif
 
       avail = eat_nul (below, &temp, &header);
@@ -369,7 +371,8 @@ check_gzip_header (PerlIO *f) {
     }
     if (flags & GZIP_HAS_COMMENT) {
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf" has comment\n", header, avail);
+      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf
+		   " has comment\n", header, (UV)avail);
 #endif
 
       avail = eat_nul (below, &temp, &header);
@@ -381,7 +384,8 @@ check_gzip_header (PerlIO *f) {
   
     if (flags & GZIP_HAS_HEADERCRC) {
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf" has header CRC\n", header, avail);
+      PerlIO_debug("PerlIOGzip check_gzip_header header=%p avail=%08"UVxf
+" has header CRC\n", header, (UV)avail);
 #endif
       if (avail < 2) {
 	/* Need some more */
@@ -401,7 +405,8 @@ check_gzip_header (PerlIO *f) {
     if (temp) {
       SSize_t unread;
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip check_gzip_header finished. unreading header=%p avail=%08"UVxf"\n", header, avail);
+      PerlIO_debug("PerlIOGzip check_gzip_header finished. unreading header=%p "
+		   "avail=%08"UVxf"\n", header, (UV)avail);
 #endif
       if (avail) {
 	unread = PerlIO_unread (below, header, avail);
@@ -414,7 +419,8 @@ check_gzip_header (PerlIO *f) {
       }
       SvREFCNT_dec(temp);
     } else {
-      PerlIO_debug("PerlIOGzip check_gzip_header finished. setting ptrcnt header=%p avail=%08"UVxf"\n", header, avail);
+      PerlIO_debug("PerlIOGzip check_gzip_header finished. setting ptrcnt "
+		   "header=%p avail=%08"UVxf"\n", header, (UV)avail);
       PerlIO_set_ptrcnt(below,header,avail);
     }
   } else {
@@ -477,15 +483,17 @@ check_gzip_header_and_init (PerlIO *f) {
   /* (any header validated) */
   if (PerlIOBase(below)->flags & PERLIO_F_FASTGETS) {
 #if DEBUG_LAYERGZIP
-    PerlIO_debug("check_gzip_header_and_init :-). f=%p %s fl=%08"UVxf"\n",
-		 below,PerlIOBase(below)->tab->name, PerlIOBase(below)->flags);
+    PerlIO_debug("check_gzip_header_and_init :-). f=%p %s fl=%08X\n",
+		 below, PerlIOBase(below)->tab->name,
+		 (int)PerlIOBase(below)->flags);
 #endif
   } else {
     /* Bah. Layer below us doesn't support FASTGETS. So we need to add a layer
        to provide our input buffer.  */
 #if DEBUG_LAYERGZIP
-    PerlIO_debug("check_gzip_header_and_init :-(. f=%p %s fl=%08"UVxf"\n",
-		 below,PerlIOBase(below)->tab->name, PerlIOBase(below)->flags);
+    PerlIO_debug("check_gzip_header_and_init :-(. f=%p %s fl=%08X\n",
+		 below, PerlIOBase(below)->tab->name,
+		 (int) PerlIOBase(below)->flags);
 #endif
     if (!PerlIO_push(aTHX_ below,&PerlIO_perlio,"r",&PL_sv_undef))
       return LAYERGZIP_GZIPHEADER_ERROR;
@@ -994,8 +1002,8 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
   g->zs.avail_out = b->bufsiz;
 
 #if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip_fill next_out=%p avail_out=%08"UVxf"\n",
-	       g->zs.next_out,g->zs.avail_out);
+  PerlIO_debug("PerlIOGzip_fill next_out=%p avail_out=%08x status=%d\n",
+	       g->zs.next_out,g->zs.avail_out, g->status);
 #endif
 
   assert (PerlIO_fast_gets(n));
@@ -1004,7 +1012,7 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
     /* If we have run out of input then read some more.  */
     avail = PerlIO_get_cnt(n);
 #if DEBUG_LAYERGZIP
-    PerlIO_debug("PerlIOGzip_fill avail=%08"UVxf" status=%d\n", avail,
+    PerlIO_debug("PerlIOGzip_fill avail=%08"UVxf" status=%d\n", (UV)avail,
 		 g->status);
 #endif
     /* Someone is going to give us compressed input on a tty some day, and
@@ -1017,7 +1025,7 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
       if (avail == 0) {
 	avail = PerlIO_get_cnt(n);
 #if DEBUG_LAYERGZIP
-	PerlIO_debug("PerlIOGzip_fill refill, avail=%08"UVxf"\n",avail);
+	PerlIO_debug("PerlIOGzip_fill refill, avail=%08"UVxf"\n",(UV)avail);
 #endif
       } else {
 	/* To make this non blocking friendly would we need to change this?  */
@@ -1028,19 +1036,19 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
 	     the input I got before the error.  */
 	  avail = 0;
 #if DEBUG_LAYERGZIP
-	PerlIO_debug("PerlIOGzip_fill error, avail=%08"UVxf"\n",avail);
+	PerlIO_debug("PerlIOGzip_fill error, avail=%08"UVxf"\n",(UV)avail);
 #endif
 	} else if (PerlIO_eof(n)) {
 	  g->status = LAYERGZIP_STATUS_INPUT_EOF;
 	  avail = 0;
 #if DEBUG_LAYERGZIP
-	PerlIO_debug("PerlIOGzip_fill input eof, avail=%08"UVxf"\n",avail);
+	PerlIO_debug("PerlIOGzip_fill input eof, avail=%08"UVxf"\n",(UV)avail);
 #endif
 	} else {
 	  avail = 0;
 #if DEBUG_LAYERGZIP
 	  PerlIO_debug("PerlIOGzip_fill how did I get here?, avail=%08"UVxf
-		       "\n",avail);
+		       "\n",(UV)avail);
 #endif
 	}
       }
@@ -1054,12 +1062,12 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
        blocking work by forcing as much output as possible if the input
        blocked.  */
 #if DEBUG_LAYERGZIP
-    PerlIO_debug("PerlIOGzip_fill preinf  next_in=%p avail_in=%08"UVxf"\n",
+    PerlIO_debug("PerlIOGzip_fill preinf  next_in=%p avail_in=%08x\n",
 		 g->zs.next_in,g->zs.avail_in);
 #endif
     status = inflate (&(g->zs), avail ? Z_NO_FLUSH : Z_SYNC_FLUSH);
 #if DEBUG_LAYERGZIP
-    PerlIO_debug("PerlIOGzip_fill postinf next_in=%p avail_in=%08"UVxf" status=%d\n",
+    PerlIO_debug("PerlIOGzip_fill postinf next_in=%p avail_in=%08x status=%d\n",
 	       g->zs.next_in,g->zs.avail_in, status);
 #endif
   
@@ -1085,7 +1093,7 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
 	spot and barf on.  */
 
 #if DEBUG_LAYERGZIP
-  PerlIO_debug("PerlIOGzip_fill leaving next_out=%p avail_out=%08"UVxf"\n",
+  PerlIO_debug("PerlIOGzip_fill leaving next_out=%p avail_out=%08x\n",
 	       g->zs.next_out,g->zs.avail_out);
 #endif
   
@@ -1148,8 +1156,8 @@ PerlIOGzip_flush(pTHX_ PerlIO *f) {
 			   && g->status == LAYERGZIP_STATUS_NORMAL)) {
       int status;
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip_flush predef  next_in= %p avail_in= %08"UVxf"\n"
-		   "                         next_out=%p avail_out=%08"UVxf
+      PerlIO_debug("PerlIOGzip_flush predef  next_in= %p avail_in= %08x\n"
+		   "                         next_out=%p avail_out=%08x"
 		   "\n", g->zs.next_in, g->zs.avail_in, g->zs.next_out,
 		   g->zs.avail_out);
 #endif
@@ -1157,8 +1165,8 @@ PerlIOGzip_flush(pTHX_ PerlIO *f) {
 			? Z_FINISH : 0);
 
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("PerlIOGzip_flush postdef next_in= %p avail_in= %08"UVxf"\n"
-		   "                         next_out=%p avail_out=%08"UVxf" "
+      PerlIO_debug("PerlIOGzip_flush postdef next_in= %p avail_in= %08x\n"
+		   "                         next_out=%p avail_out=%08x "
 		   "status=%d\n", g->zs.next_in,g->zs.avail_in,
 		   g->zs.next_out,g->zs.avail_out, status);
 #endif

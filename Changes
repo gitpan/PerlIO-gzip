@@ -90,3 +90,11 @@ Revision history for Perl extension Layer::Gzip.
       symbols. Hence gzip.xs won't link on platforms such as AIX and Windows.
       This is fixed in 5.8.1 - Inline the code for PerlIOBuf_close when
       building for 5.8.0.
+
+0.16  Fri Jun 25 09:38:28 BST 2004
+      Merge this in from Sun Nov  4 15:27:24 GMT 2001:
+      Split the tests from test.pl into t/read.t, t/write.t
+      use Test::More; [Happy Schwern? :-)] and loop over several buffering
+      possibilities.
+      
+      Actually unlink the test perl.gz file.
