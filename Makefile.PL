@@ -1,11 +1,12 @@
-require 5.007; # Stop perl 5.005 or earler barfing on the v string
+#!perl -w
+use 5.007001; # Stop perl 5.005 or earler barfing on the v string
 # require 5.7.0;
 use ExtUtils::MakeMaker;
 use Config;
 
 unless ($Config{useperlio} eq 'define' and $Config{usesfio} eq 'false') {
   die <<BARF;
-You need perl 5.7.0 or later, configured to use perlio (and not to use sfio)
+You need perl 5.7.1 or later, configured to use perlio (and not to use sfio)
 Yes, this module is currently only suitable for the development branch of
 perl
 
@@ -20,6 +21,38 @@ Note
 BARF
 }
 
+# OK. Is this worth it? For starters, it's somewhat potty as the "OS types" in
+# RFC 1952 are actaully semi-muddled with FS types.
+
+my $ostype;
+
+if ($^O eq 'dos') {
+  $ostype = 0;
+} elsif ($^O eq 'amigaos') {
+  $ostype = 1;
+} elsif ($^O eq 'VMS') {
+  $ostype = 2;
+} elsif ($^O eq 'mint') {
+  # Is this correct?
+  $ostype = 5;
+} elsif ($^O eq 'os2') {
+  $ostype = 6;
+} elsif ($^O eq 'MacOS') {
+  $ostype = 7;
+} elsif ($^O eq 'MSWin32' or $^O eq 'cygwin') {
+  $ostype = 11;
+} elsif ($^O eq 'RISCOS') {
+  $ostype = 13;
+} elsif ($Config{cppccsymbols} =~ /\sunix=/ or $^O eq 'darwin') {
+  # Darwin is a BSD, but it has a somewhat borked gcc, so be sure to get it
+  $ostype = 3;
+} else {
+  # Don't know.
+  $ostype = ''
+}
+
+$ostype = "-DLAYERGZIP_DEFAULT_OS_TYPE=$ostype" if length $ostype;
+
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
@@ -30,6 +63,7 @@ WriteMakefile(
       (ABSTRACT_FROM => 'gzip.pm', # retrieve abstract from module
        AUTHOR     => 'Nicholas Clark <nick@talking.bollo.cx>') : ()),
     'LIBS'		=> ['-lz'],
+    'DEFINE'		=> $ostype,
 #    'DEFINE'		=> '-g -Wall -DDEBUG_LAYERGZIP',
 	# Insert -I. if you add *.h files later:
     'INC'		=> '', # e.g., '-I/usr/include/other'

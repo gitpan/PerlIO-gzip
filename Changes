@@ -45,3 +45,13 @@ Revision history for Perl extension Layer::Gzip.
       problems with unread, so you can't inflate any gzip file with an
       original filename (or comment) in the header. This is related to the
       /* fix me */ mentioned in perlio.c. Hopefully it will be soon.
+
+0.09  Sat Apr 21 16:14:54 BST 2001
+      The perlio.c layer API has changed by the 5.7.1 release. 0.08 and earlier
+      won't compile - 0.09 mainly consists of necessary changes to function
+      prototypes and the layer struct. 5.7.1 contains a known bug - when
+      opening a file with layers specified, failure of a layer to push is
+      supposed to cause the open to fail. In 5.7.0 it did. In 5.7.1 it doesn't.
+      Commented the tests that will fail due to this bug.
+      Attempted to detect the "OS" type at compile time to set the default
+      OS for the gzip header.

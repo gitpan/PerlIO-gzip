@@ -1,12 +1,12 @@
 package PerlIO::gzip;
 
-use 5.007;
+use 5.007001;
 use strict;
 use warnings;
 
 use XSLoader ();
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 XSLoader::load "PerlIO::gzip", $VERSION;
 

@@ -487,7 +487,7 @@ check_gzip_header_and_init (PerlIO *f) {
     PerlIO_debug("check_gzip_header_and_init :-(. f=%p %s fl=%08"UVxf"\n",
 		 below,PerlIOBase(below)->tab->name, PerlIOBase(below)->flags);
 #endif
-    if (!PerlIO_push(below,&PerlIO_perlio,"r",Nullch,0))
+    if (!PerlIO_push(below,&PerlIO_perlio,"r",&PL_sv_undef))
       return LAYERGZIP_GZIPHEADER_ERROR;
     g->flags |= LAYERGZIP_FLAG_OURBUFFERBELOW;
     below = PerlIONext(f);
@@ -626,21 +626,67 @@ write_gzip_header_and_init (PerlIO *f) {
  *
  *****************************************************************************/
 
+static SV *
+PerlIOGzip_getarg(PerlIO *f)
+{
+  PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
+  SV *sv;
+  register const char *mode;
+
+  switch (g->flags & LAYERGZIP_FLAG_READMODEMASK) {
+  case LAYERGZIP_FLAG_GZIPHEADER:
+    if (!(g->flags & LAYERGZIP_FLAG_AUTOPOP)) {
+      /* Default */
+      sv = newSVpvn("",0);
+      return sv ? sv : &PL_sv_undef;
+    }
+    mode = "gzip";
+    break;
+  case LAYERGZIP_FLAG_NOGZIPHEADER:
+    mode = "none";
+    break;
+  case LAYERGZIP_FLAG_MAYBEGZIPHEADER:
+    mode = "auto";
+    break;
+  case LAYERGZIP_FLAG_LAZY:
+    mode = "lazy";
+    break;
+  }
+
+  sv = newSVpv (mode, 4);
+  if (!sv)
+    return &PL_sv_undef;
+
+  if (g->flags & LAYERGZIP_FLAG_AUTOPOP)
+    sv_catpv (sv, ",autopop");
+
+  return sv;
+}
+
 static IV
-PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
+PerlIOGzip_pushed(PerlIO *f, const char *mode, SV *arg)
 {
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   IV code = 0;
+  STRLEN len;
+  const char *argstr;
+
+  if (arg)
+    argstr = SvPV(arg, len);
+  else {
+    argstr = NULL;
+    len = 0;
+  }
   
 #if DEBUG_LAYERGZIP
   PerlIO_debug("PerlIOGzip_pushed f=%p %s %s fl=%08"UVxf" g=%p\n",
 	       f,PerlIOBase(f)->tab->name,(mode) ? mode : "(Null)",
 	       PerlIOBase(f)->flags, g);
-  if (arg)
-    PerlIO_debug("  len=%d arg=%.*s\n", (int)len, (int)len, arg);
+  if (argstr)
+    PerlIO_debug("  len=%d argstr=%.*s\n", (int)len, (int)len, argstr);
 #endif
 
-  code = PerlIOBuf_pushed(f,mode,NULL,0);
+  code = PerlIOBuf_pushed(f,mode,&PL_sv_undef);
   if (code)
     return code;
 
@@ -651,33 +697,34 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
   g->os_type = LAYERGZIP_DEFAULT_OS_TYPE;
 
   if (len) {
-    const char *end = arg + len;
+    const char *end = argstr + len;
     while (1) {
       int arg_bad = 0;
-      const char *comma = memchr (arg, ',', len);
-      STRLEN this_len = comma ? (comma - arg) : (end - arg);
+      const char *comma = memchr (argstr, ',', len);
+      STRLEN this_len = comma ? (comma - argstr) : (end - argstr);
 
 #if DEBUG_LAYERGZIP
-      PerlIO_debug("  processing len=%d arg=%.*s\n",
-		   (int)this_len, (int)this_len, arg);
+      PerlIO_debug("  processing len=%d argstr=%.*s\n",
+		   (int)this_len, (int)this_len, argstr);
 #endif
 
       if (this_len == 4) {
-	if (memEQ (arg, "none", 4)) {
+	if (memEQ (argstr, "none", 4)) {
 	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
 	  g->flags |= LAYERGZIP_FLAG_NOGZIPHEADER;
-	} else if (memEQ (arg, "auto", 4)) {
+	} else if (memEQ (argstr, "auto", 4)) {
 	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
 	  g->flags |= LAYERGZIP_FLAG_MAYBEGZIPHEADER;
-	} 	else if (memEQ (arg, "lazy", 4))
+        } else if (memEQ (argstr, "lazy", 4)) {
+	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
 	  g->flags |= LAYERGZIP_FLAG_LAZY;
-	else if (memEQ (arg, "gzip", 4)) {
+	} else if (memEQ (argstr, "gzip", 4)) {
 	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
 	  g->flags |= LAYERGZIP_FLAG_GZIPHEADER;
 	} else
 	  arg_bad = 1;
       } else if (this_len == 7) {
-	if (memEQ (arg, "autopop", 7)) {
+	if (memEQ (argstr, "autopop", 7)) {
 	  g->flags &= ~LAYERGZIP_FLAG_READMODEMASK;
 	  g->flags |= LAYERGZIP_FLAG_AUTOPOP;
 	} else
@@ -686,13 +733,14 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
 
       if (arg_bad) {
 	dTHX;       /* fetch context */
+        /* XXX This will mangle UTF8 in error messages  */
 	Perl_warn(aTHX_ "perlio: layer :gzip, unrecognised argument \"%.*s\"",
-		  (int)this_len, arg);
+		  (int)this_len, argstr);
       }
 
       if (!comma)
 	break;
-      arg = comma + 1;
+      argstr = comma + 1;
     }
   }
   
@@ -1171,13 +1219,12 @@ PerlIO_seek_fail(PerlIO *f, Off_t offset, int whence)
 PerlIO_funcs PerlIO_gzip = {
   "gzip",
   sizeof(PerlIOGzip),
-  PERLIO_K_BUFFERED,
-  PerlIOBase_fileno,
-  PerlIOBuf_fdopen,	/* Do these   */
-  PerlIOBuf_open,	/* three work */
-  PerlIOBuf_reopen,	/* like this? */
+  PERLIO_K_BUFFERED, /* XXX destruct */
   PerlIOGzip_pushed,
   PerlIOGzip_popped,
+  PerlIOBuf_open,
+  PerlIOGzip_getarg,
+  PerlIOBase_fileno,
   PerlIOBuf_read,
   PerlIOBuf_unread, /* I am not convinced that this is going to work */
   PerlIOBuf_write,
@@ -1189,7 +1236,7 @@ PerlIO_funcs PerlIO_gzip = {
   PerlIOBase_eof,
   PerlIOBase_error,
   PerlIOBase_clearerr,
-  PerlIOBuf_setlinebuf,
+  PerlIOBase_setlinebuf,
   PerlIOBuf_get_base,
   PerlIOBuf_bufsiz,
   PerlIOBuf_get_ptr,

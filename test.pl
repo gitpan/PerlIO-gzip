@@ -94,7 +94,7 @@ if (open FOO, "<", "README") {
 
 # This should fail to open
 if (open FOO, "<:gzip", "README") {
-  print "not ok 13\n";
+  print "not ok 13 # The open has succeeded. It should have failed due to gzip layer failing to be pushed. This is a known bug in the 5.7.1 distribution.\n";
 } else {
   print "ok 13\n";
 }
@@ -551,7 +551,7 @@ if (close FOO) {
 }
 # No header. Should fail
 if (open FOO, "<:gzip", "foo") {
-  print "not ok 93\n";
+  print "not ok 93 # The open has succeeded. It should have failed due to gzip layer failing to be pushed. This is a known bug in the 5.7.1 distribution.\n";
 } else {
   print "ok 93\n";
 }
@@ -574,12 +574,12 @@ while (-f "foo") {
 
 # Read/writes don't work
 if (open FOO, "+<:gzip", "empty") {
-  print "not ok 97\n";
+  print "not ok 97 # The open has succeeded. It should have failed due to gzip layer refusing to open read/write. This is a known bug in the 5.7.1 distribution.\n";
 } else {
   print "ok 97\n";
 }
 if (open FOO, "+>:gzip(lazy)", "empty") {
-  print "not ok 98\n";
+  print "not ok 98 # The open has succeeded. It should have failed due to gzip layer refusing to open read/write. This is a known bug in the 5.7.1 distribution.\n";
 } else {
   print "ok 98\n";
 }
