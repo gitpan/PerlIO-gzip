@@ -4,12 +4,11 @@ use 5.007;
 use strict;
 use warnings;
 
-require DynaLoader;
+use XSLoader ();
 
-our @ISA = qw(DynaLoader);
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
-bootstrap PerlIO::gzip $VERSION;
+XSLoader::load "PerlIO::gzip", $VERSION;
 
 1;
 __END__
@@ -58,7 +57,7 @@ deflate stream (eg as would be found inside a C<zip> file)
 
 Potentially dangerous. If the first two bytes match the C<gzip> header
 "\x1f\x8b" then a gzip header is assumed (and checked) else a deflate stream
-is assumed.  No different from gzip on writign.
+is assumed.  No different from gzip on writing.
 
 =item autopop
 

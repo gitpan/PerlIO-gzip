@@ -12,7 +12,7 @@ perl
 Note
   1: The features required for layers have only recently been added to
      development perl, so if your doesn't have the header perliol.h it's
-     to old
+     too old
   2: perlio is not the default Configure choices, as it does not give binary
      compatibility with previous perl versions. You may need to compile a
      new perl from source if you are unable to find a perl precompiled with

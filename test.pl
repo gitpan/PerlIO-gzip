@@ -7,7 +7,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test;
-BEGIN { plan tests => 90 };
+BEGIN { plan tests => 98 };
 use File::Compare; # This is standard in all distributions that have layers.
 use Config;
 use PerlIO::gzip;

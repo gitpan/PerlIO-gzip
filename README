@@ -1,8 +1,9 @@
-PerlIO::gzip version 0.06
+PerlIO::gzip version 0.07
 =========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
-Alpha at the moment, only gunzips.
+Alpha at the moment, does now (well, since 0.06, oops) gzip and gunzip.
+**DON'T** trust it with your data.
 
 YOU NEED PERL 5.7.0 or later
                             yes. this only works on UNSTABLE DEVELOPMENT PERL
@@ -22,7 +23,7 @@ That echo statement is particularly important.
 DEPENDENCIES
 
 This module requires perl 5.7 or later compiler with PerlIO.
-(which is not the default yet)
+(which is not the default yet), and the zlib compression library.
 
 BUGS
 

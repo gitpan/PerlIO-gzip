@@ -626,7 +626,6 @@ write_gzip_header_and_init (PerlIO *f) {
 static IV
 PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
 {
-  dTHX;       /* fetch context */
   PerlIOGzip *g = PerlIOSelf(f,PerlIOGzip);
   IV code = 0;
   
@@ -682,9 +681,11 @@ PerlIOGzip_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
 	  arg_bad = 1;
       }
 
-      if (arg_bad)
+      if (arg_bad) {
+	dTHX;       /* fetch context */
 	Perl_warn(aTHX_ "perlio: layer :gzip, unregonised argument \"%.*s\"",
 		  (int)this_len, arg);
+      }
 
       if (!comma)
 	break;

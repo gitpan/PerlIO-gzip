@@ -32,3 +32,8 @@ Revision history for Perl extension Layer::Gzip.
       Hmm. Why was I passing *my* args down to the PerlIOBuf I'm a derived
       class of? On the other hand, why not? ISA or HASA? My args, HASA, I
       guess, so I'll give it NULL args.
+
+0.07  Sun Feb 18 23:21:48 GMT 2001
+      s/to/too/ in the BARF message in Makefile.PL [1 character change. Look
+      at the paperwork that generated :-)]
+      use XSLoader rather than Dynaloader.
