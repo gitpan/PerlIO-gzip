@@ -7,7 +7,7 @@ use warnings;
 require DynaLoader;
 
 our @ISA = qw(DynaLoader);
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 bootstrap PerlIO::gzip $VERSION;
 
@@ -29,10 +29,9 @@ PerlIO::gzip - Perl extension to provide a PerlIO layer to gzip/gunzip
 =head1 DESCRIPTION
 
 PerlIO::gzip provides a PerlIO layer that manipulates files in the format used
-by the C<gzip> program.  Currently only decompression is implemented.  If you
-atttempt to open a file for writing (or reading and writing) the open will
-fail. (except in "autopop" mode, where the gzip layer will be automatically
-popped from the file handle instead).
+by the C<gzip> program.  Compression and Decompression are implemented, but
+not together.  If you atttempt to open a file for reading and writing the open
+will fail.
 
 =head1 EXPORT
 
@@ -47,18 +46,19 @@ options choose the header checking mode:
 
 =item gzip
 
-The default.  Expects a standard gzip file header.
+The default.  Expects a standard gzip file header for reading, writes a
+standard gzip file header.
 
 =item none
 
-Expects no file header; assumes the file handle is immediately  a deflate
-stream (eg as would be found inside a C<zip> file)
+Expects or writes no file header; assumes the file handle is immediately a
+deflate stream (eg as would be found inside a C<zip> file)
 
 =item auto
 
 Potentially dangerous. If the first two bytes match the C<gzip> header
 "\x1f\x8b" then a gzip header is assumed (and checked) else a deflate stream
-is assumed.
+is assumed.  No different from gzip on writign.
 
 =item autopop
 
@@ -80,11 +80,15 @@ Optionally you can add this flag:
 
 =item lazy
 
-Defer header checking until the first read.  By default, gzip header
-checking is done before the C<open> (or C<binmode>) returns, so if an error
-is detected in the gzip header the C<open> or C<binmode> will fail.  However,
-this will require reading some data.  With lazy set the check is deferred
-until the first read, so the C<open> should always succeed, but any problems
+For reading, defer header checking until the first read.  For writing, don't
+write a header until the first buffer empty of compressed data to disk.
+(and don't write anything at all if no data was written to the handle)
+
+By default, gzip header checking is done before the C<open> (or C<binmode>)
+returns, so if an error is detected in the gzip header the C<open> or
+C<binmode> will fail.  However, this will require reading some data, or writing
+a header.  With lazy set on a file opened for reading the check is deferred
+until the first read so the C<open> should always succeed, but any problems
 with the header will cause an error on read.
 
   open FOO, "<:gzip(lazy)", "file.gz" or die $!; # Dangerous.

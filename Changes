@@ -23,3 +23,12 @@ Revision history for Perl extension Layer::Gzip.
       the CRC or the length recorded in the gzip trailer is wrong.  Doesn't
       try these checks for files with no gzip header.
       PROTOTYPES: DISABLE in the .xs
+
+0.06  Fri Feb 16 23:59:18 GMT 2001
+      We have compression!
+      Hmm. Didn't check the return from close on perl.gz - transpires there
+      was a bug in my code to read the length of uncompressed data from the
+      gzip file
+      Hmm. Why was I passing *my* args down to the PerlIOBuf I'm a derived
+      class of? On the other hand, why not? ISA or HASA? My args, HASA, I
+      guess, so I'll give it NULL args.

@@ -1,4 +1,4 @@
-PerlIO::gzip version 0.05
+PerlIO::gzip version 0.06
 =========================
 
 A layer for the PerlIO system to transparently gzip/gunzip files.
@@ -27,18 +27,24 @@ This module requires perl 5.7 or later compiler with PerlIO.
 BUGS
 
 Threads - I doubt this module is threadsafe.
+flush() doesn't really flush, just empty the buffer
 
 TODO
 
 Lots:
 
+Rewrite flush to really flush, and write a PerlIOGzip_write() rather than
+rely on PerlIOBuf_write, which calls flush() to empty the buffer each time.
+Test more
 Cope with crlf systems. Should this layer turn off crlf on the layer below
 and turn it on on itself?
 Cope with utf8. Should the utf8 flag be hiked above us?
+Test more
 Worry about threads.
-Compression (gzip)
+Writing headers with fancy stuff (filename, comment, extra info, header crc)
 What to about the "TEXT" flag in the gzip header
 Test more
+Detect OS type at build time
 
 COPYRIGHT AND LICENCE
 
