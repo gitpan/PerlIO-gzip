@@ -1,0 +1,11 @@
+Changes
+gzip.pm
+gzip.xs
+MANIFEST
+Makefile.PL
+README
+test.pl
+ok3.gz
+ok17.gz
+ok19
+ok21

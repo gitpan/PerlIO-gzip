@@ -1,0 +1,50 @@
+PerlIO/gzip version 0.03
+========================
+
+A layer for the PerlIO system to transparently gzip/gunzip files.
+Alpha at the moment, only gunzips.
+
+YOU NEED PERL 5.7.0 or later
+                            yes. this only works on UNSTABLE DEVELOPMENT PERL
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   echo I know that this is alpha quality and I am using it at my own risk
+   make install
+
+That echo statement is particularly important.
+
+DEPENDENCIES
+
+This module requires perl 5.7 or later compiler with PerlIO.
+(which is not the default yet)
+
+BUGS
+
+Threads - I doubt this module is threadsafe.
+
+TODO
+
+Lots:
+
+Cope with crlf systems. Should this layer turn off crlf on the layer below
+and turn it on on itself?
+Cope with utf8. Should the utf8 flag be hiked above us?
+Worry about threads.
+Compression (gzip)
+What to about the "TEXT" flag in the gzip header
+Test more
+
+COPYRIGHT AND LICENCE
+
+You may distribute this work under the terms of either the GNU General
+Public License or the Artistic License, as specified in perl's README
+file.
+
+Copyright © 2001 Nicholas Clark
+

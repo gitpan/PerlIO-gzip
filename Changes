@@ -1,0 +1,13 @@
+Revision history for Perl extension Layer::Gzip.
+
+0.01  Sat Feb  3 13:51:15 2001
+	- original version; created by h2xs 1.21 with options
+		-c -n Layer::Gzip /usr/local/include/sfio.h
+
+0.02  Sunday
+      parse gzip header, 40 regression tests
+
+0.03  Tue Feb  6 18:50:01 GMT 2001
+      Change name from Layer::Gzip to PerlIO::gzip following feedback on p5p.
+      Add checks to Makefile.PL to ensure you have 5.7.0 [or later :-)] and
+      PerlIO configure.
