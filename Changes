@@ -1,4 +1,4 @@
-Revision history for Perl extension Layer::Gzip.
+Revision history for Perl extension PerlIO::Gzip.
 
 0.01  Sat Feb  3 13:51:15 2001
 	- original version; created by h2xs 1.21 with options
@@ -111,3 +111,10 @@ Revision history for Perl extension Layer::Gzip.
       This means that all the TODO tests can be taken out, as they now pass.
 
       Fix small typo in read.t
+
+0.18  Sun Oct  1 22:08:32 BST 2006
+      Patch from alexchorny [at] gmail.com (#21469) - write.t fails
+      (I had the skip arguments wrong)
+      TODO 2 tests in read.t which fail. I'm infering that this is because
+      :stdio opens in text mode, and there's no way to tell it to open in
+      binary mode. Time to consult p5p.

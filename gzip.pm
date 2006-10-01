@@ -6,7 +6,7 @@ use warnings;
 
 use XSLoader ();
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 XSLoader::load "PerlIO::gzip", $VERSION;
 
@@ -104,7 +104,7 @@ lazy is ignored if you are in autopop mode.
 
 =head1 AUTHOR
 
-Nicholas Clark, E<lt>nick@talking.bollo.cxE<gt>
+Nicholas Clark, E<lt>nwc10+perlio-gzip@colon.colondot.netE<gt>
 
 =head1 SEE ALSO
 

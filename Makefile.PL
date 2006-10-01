@@ -48,16 +48,12 @@ WriteMakefile(
     'NAME'		=> 'PerlIO::gzip',
     'VERSION_FROM'	=> 'gzip.pm', # finds $VERSION
     'PREREQ_PM'		=> {}, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM => 'gzip.pm', # retrieve abstract from module
-       AUTHOR     => 'Nicholas Clark <nick@talking.bollo.cx>') : ()),
+    ABSTRACT_FROM	=> 'gzip.pm', # retrieve abstract from module
+    AUTHOR	=> 'Nicholas Clark <nwc10+perlio-gzip@colon.colondot.net>',
     'LIBS'		=> ['-lz'],
     'DEFINE'		=> $ostype,
+    ((eval $ExtUtils::MakeMaker::VERSION > 6.30) ? (LICENSE => 'perl') : ()),
 #    'DEFINE'		=> '-g -Wall -DDEBUG_LAYERGZIP',
-	# Insert -I. if you add *.h files later:
-    'INC'		=> '', # e.g., '-I/usr/include/other'
-	# Un-comment this if you add C files to link with later:
-    # 'OBJECT'		=> '$(O_FILES)', # link all the C files too
 );
 
 # Check out Radioactive::Decay at http://belfast.pm.org/Modules/

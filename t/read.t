@@ -32,6 +32,8 @@ my $command = "gzip -c --fast $^X >$perlgz";
 my $unread_bug = "Can't unread then push layer on :unix [core perlio bug]";
 my $unread_stdio_bug
  = "Can't unread the push layer on :stdio [core perlio bug]";
+# I think that the problem is that you can't specify "b" on the fopen()
+my $win32_stdio_hairy = ":stdio is a bit hairy on Win32";
 my $stdio = 'Not really a layer name';
 $stdio = ':stdio' unless $Config{d_faststdio} and $Config{usefaststdio};
 
@@ -134,11 +136,15 @@ foreach my $buffering ('', ':unix', ':stdio', ':perlio') {
     ok ((open GZ, "<$buffering:gzip", "perl.gz"), "open perl.gz");
   TODO: {
       # local $TODO = $unread_bug if $buffering eq ':unix';
+      local $TODO = $win32_stdio_hairy
+	  if $buffering eq ':stdio' && $^O eq 'MSWin32';
       ok (compare ($^X, \*GZ) == 0, "compare with original $^X");
     }
     ok (eof (GZ), 'should be end of file');
   TODO: {
       # local $TODO = $unread_bug if $buffering eq ':unix';
+      local $TODO = $win32_stdio_hairy
+	  if $buffering eq ':stdio' && $^O eq 'MSWin32';
       ok ((close GZ), "close perl.gz");
     }
   }

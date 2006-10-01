@@ -1,10 +1,12 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         PerlIO-gzip
-version:      0.17
-version_from: gzip.pm
-installdirs:  site
-requires:
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+--- #YAML:1.0
+name:                PerlIO-gzip
+version:             0.18
+abstract:            Perl extension to provide a PerlIO layer to gzip/gunzip
+license:             perl
+generated_by:        ExtUtils::MakeMaker version 6.30_02
+author:              Nicholas Clark <nwc10+perlio-gzip@colon.colondot.net>
+distribution_type:   module
+requires:     
+meta-spec:
+    url: <http://module-build.sourceforge.net/META-spec-new.html>;
+    version: 1.1

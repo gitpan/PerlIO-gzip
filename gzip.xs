@@ -118,11 +118,11 @@ get_more (PerlIO *below, SSize_t wanted, SV **sv, unsigned char **buffer) {
     *sv = newSVpvn("", 0);
     if (!*sv)
       return -1;
-    read_here = SvGROW(*sv, get);
+    read_here = (unsigned char *) SvGROW(*sv, get);
     *buffer = read_here + done;
   } else {
     done = SvCUR(*sv);
-    read_here = *buffer = SvGROW(*sv, done + wanted) + done;
+    read_here = *buffer = (unsigned char *) SvGROW(*sv, done + wanted) + done;
     get = wanted; /* Only need to read the next section  */
   }
 
@@ -165,8 +165,9 @@ eat_nul (PerlIO *below, SV **sv, unsigned char **buffer) {
 
   if (!*sv) {
     /* Buffer below supposed fast_gets.  */
-    STDCHAR *end = PerlIO_get_base(below) + PerlIO_get_bufsiz(below);
-    STDCHAR *here = (STDCHAR *)*buffer;
+    unsigned char *end
+      = (unsigned char *) PerlIO_get_base(below) + PerlIO_get_bufsiz(below);
+    unsigned char *here = *buffer;
 
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip eat_nul here=%p end=%p\n", here, end);
@@ -195,7 +196,7 @@ eat_nul (PerlIO *below, SV **sv, unsigned char **buffer) {
 #endif
 
   while (1) {
-    STDCHAR *end, *here;
+    unsigned char *end, *here;
     SSize_t avail = get_more (below, munch_size, sv, buffer);
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip eat_nul sv=%p buffer=%p wanted=%08"UVxf" avail=%08"UVxf"\n",
@@ -204,8 +205,8 @@ eat_nul (PerlIO *below, SV **sv, unsigned char **buffer) {
     if (avail == -1 || avail == 0)
       return -1;
 
-    end = (STDCHAR *)SvEND(*sv);
-    here = (STDCHAR *)*buffer;
+    end = (unsigned char *)SvEND(*sv);
+    here = *buffer;
 
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip eat_nul here=%p end=%p\n", here, end);
@@ -268,12 +269,12 @@ check_gzip_header (PerlIO *f) {
 #endif
 
   if (avail >= GZIP_HEADERSIZE)
-     header = PerlIO_get_ptr(below);
+    header = (unsigned char *) PerlIO_get_ptr(below);
   else {
     temp = newSVpvn("", 0);
     if (!temp)
       return LAYERGZIP_GZIPHEADER_ERROR;
-    header = SvGROW(temp, GZIP_HEADERSIZE);
+    header = (unsigned char *) SvGROW(temp, GZIP_HEADERSIZE);
 #if DEBUG_LAYERGZIP
     PerlIO_debug("PerlIOGzip check_gzip_header below=%p header=%p size %d\n",
 		 below, header, GZIP_HEADERSIZE);
@@ -433,7 +434,7 @@ check_gzip_header (PerlIO *f) {
     } else {
       PerlIO_debug("PerlIOGzip check_gzip_header finished. setting ptrcnt "
 		   "header=%p avail=%08"UVxf"\n", header, (UV)avail);
-      PerlIO_set_ptrcnt(below,header,avail);
+      PerlIO_set_ptrcnt(below, (STDCHAR *) header, avail);
     }
   } else {
     /* Unread the whole the SV.  Maybe I should try to seek first. */
@@ -1103,7 +1104,7 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
 #endif
   
     /* And we trust that zlib gets these two correct  */
-    PerlIO_set_ptrcnt(n,g->zs.next_in,g->zs.avail_in);
+    PerlIO_set_ptrcnt(n, (STDCHAR *) g->zs.next_in, g->zs.avail_in);
 
     if (status != Z_OK) {
       if (status == Z_STREAM_END) {
@@ -1130,10 +1131,10 @@ PerlIOGzip_fill(pTHX_ PerlIO *f)
   
   if (g->zs.next_out != (Bytef *) b->buf) {
     /* Success if we got at least one byte. :-) */
-    b->end = g->zs.next_out;
+    b->end = (STDCHAR *) g->zs.next_out;
     /* Update the crc */
     if (g->flags & LAYERGZIP_FLAG_DO_CRC_AT_END)
-      g->crc = crc32(g->crc, b->buf, b->end - b->buf);
+      g->crc = crc32(g->crc, (Bytef *) b->buf, b->end - b->buf);
     PerlIOBase(f)->flags |= PERLIO_F_RDBUF;
     return 0;
   }
@@ -1211,7 +1212,7 @@ PerlIOGzip_flush(pTHX_ PerlIO *f) {
 	if (z->avail_out == 0 || status == Z_STREAM_END) {
 	  PerlIO *n = PerlIONext(f);
 	  SSize_t avail = OUTSIZE - z->avail_out;
-	  STDCHAR *where = g->outbuf;
+	  STDCHAR *where = (STDCHAR *) g->outbuf;
 
 
 	  while (avail > 0) {
